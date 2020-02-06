@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 04,2020
 #
-# Last Modified: Wed Feb  5 17:41:20 2020
+# Last Modified: Thu Feb  6 01:16:38 2020
 #
 # Author: samolof
 #
@@ -56,17 +56,25 @@ def getSourceFromRef(ref: str, sources: list) -> dict:
     source = list(filter(lambda s: s['name'] == ref, sources))
 
     return len(source) > 0 and source[0] or None
-    
+
+
+def __s3getBucketSize(bucket):
+    pass
+
+def __getPartitionHash():
+    pass
+
+
+#To do transform column types to Gtypes
 class Chunker:
-    def __init__(self, path, layout_name, keys, gtype_keys, columns, gtype_columns, transform: callable ):
+    def __init__(self, path, layout_name, layoutKeys, columns, sortOrder = "desc", transform: callable = None ):
         self.path = path
         self.layout_name = layout_name
-        self.keys = keys
-        self.keys_gtype = keys_gtype
+        self.layoutKeys = layoutKeys
         self.columns = columns
-        self.gtype_columns = gtype_columns
         self.max_chunk_length = max_chunk_length
-   
+        self.sortOrder = sortOrder
+
         #obviously will generalize this
         sparkDF = spark.read.load(path)
             .format('csv')
@@ -81,7 +89,18 @@ class Chunker:
         self.sparkDF = transform(sparkDF)
 
     def partition(self):
-        pass
+        #sort
+        sortOrderStr = "desc" in self.sortOrder and "desc" or ""
+        _stk = []
+        for k in self.layoutKeys:
+            _stk.append(k + " " + sortOrderStr)
+        
+        sortedDF = self.sparkDF.orderBy(*_stk)
+
+        
+
+        #partition by key and checking max_chunks   
+        key = divideByLatitude
 
 
     

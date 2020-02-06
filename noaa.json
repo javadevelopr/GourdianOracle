@@ -34,63 +34,27 @@
                     "SNDP",
                     "FRSHTT"
                 ],
-                "gtype_columns":[
-			"station",
-			"date",
-			"latitude",
-			"longitude",
-			"elevation",
-			"name",
-			"temperature",
-			"max_temperature",
-			"min_temperature",
-			"dew_point",
-			"sea_level_pressure",
-			"station_pressure",
-			"visibility",
-			"wind_speed",
-			"max_wind_speed_sustained",
-			"max_wind_speed_gust",
-			"precipitation",
-			"snow_depth",
-			"has_fog",
-			"has_rain_or_drizzle",
-			"has_snow_or_ice_pellets",
-			"has_hail",
-			"has_thunder",
-			"has_tornado_or_funnel_cloud"
-		],
                 "layouts":[
                     {
                         "name":"approxlat_approxlng_yyyy_mm",
-			"method_name": "",
+			"transform": "",
                         "keys":[
                             "Latitude",
                             "Longitude",
                             "Date Local"
                         ],
-                        "gtype_columns":[
-                            "Latitude.ApproxLat",
-                            "Longitude.ApproxLng",
-                            "DateTime.Year",
-                            "Datetime.MonthStr"
-                        ],
+			"sort_order" : "desc",
                         "max_chunk_length": "250000"
                     },
                     {
                         "name":"yyyy_mm_approxlat_approxlng",
-			"method_name": "",
+			"transform": "",
                         "keys":[
                             "Date Local",
                             "Latitude",
                             "Longitude"
                         ],
-                        "gtype_columns":[
-                            "DateTime.Year",
-                            "Datetime.MonthStr",
-                            "Latitude.ApproxLat",
-                            "Longitude.ApproxLng"
-                        ],
+			"sort_order": "desc",
                         "max_chunk_length": "250000"
                     }
                 ]
