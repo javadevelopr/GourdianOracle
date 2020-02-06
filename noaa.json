@@ -1,0 +1,106 @@
+{
+    "dataset":{
+        "name":"noaa",
+        "sources": [
+            {
+                "name":"global_summary_of_day", 
+                "columns": [
+                    "STATION",
+                    "DATE",
+                    "LATITUDE",
+                    "LONGITUDE",
+                    "ELEVATION",
+                    "NAME",
+                    "TEMP",
+                    "TEMP_ATTRIBUTES",
+                    "DEWP",
+                    "DEWP_ATTRIBUTES",
+                    "SLP",
+                    "SLP_ATTRIBUTES",
+                    "STP",
+                    "STP_ATTRIBUTES",
+                    "VISIB",
+                    "VISIB_ATTRIBUTES",
+                    "WDSP",
+                    "WDSP_ATTRIBUTES",
+                    "MXSPD",
+                    "GUST",
+                    "MAX",
+                    "MAX_ATTRIBUTES",
+                    "MIN",
+                    "MIN_ATTRIBUTES",
+                    "PRCP",
+                    "PRCP_ATTRIBUTES",
+                    "SNDP",
+                    "FRSHTT"
+                ],
+                "gtype_columns":[
+			"station",
+			"date",
+			"latitude",
+			"longitude",
+			"elevation",
+			"name",
+			"temperature",
+			"max_temperature",
+			"min_temperature",
+			"dew_point",
+			"sea_level_pressure",
+			"station_pressure",
+			"visibility",
+			"wind_speed",
+			"max_wind_speed_sustained",
+			"max_wind_speed_gust",
+			"precipitation",
+			"snow_depth",
+			"has_fog",
+			"has_rain_or_drizzle",
+			"has_snow_or_ice_pellets",
+			"has_hail",
+			"has_thunder",
+			"has_tornado_or_funnel_cloud"
+		],
+                "layouts":[
+                    {
+                        "name":"approxlat_approxlng_yyyy_mm",
+			"method_name": "",
+                        "keys":[
+                            "Latitude",
+                            "Longitude",
+                            "Date Local"
+                        ],
+                        "gtype_columns":[
+                            "Latitude.ApproxLat",
+                            "Longitude.ApproxLng",
+                            "DateTime.Year",
+                            "Datetime.MonthStr"
+                        ],
+                        "max_chunk_length": "250000"
+                    },
+                    {
+                        "name":"yyyy_mm_approxlat_approxlng",
+			"method_name": "",
+                        "keys":[
+                            "Date Local",
+                            "Latitude",
+                            "Longitude"
+                        ],
+                        "gtype_columns":[
+                            "DateTime.Year",
+                            "Datetime.MonthStr",
+                            "Latitude.ApproxLat",
+                            "Longitude.ApproxLng"
+                        ],
+                        "max_chunk_length": "250000"
+                    }
+                ]
+                    
+                
+            }
+
+
+        ]
+
+    }
+
+}

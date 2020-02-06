@@ -1,0 +1,96 @@
+{
+    "dataset":{
+        "name":"epa_aqs",
+        "sources": [
+            {
+                "name": "ozone_daily_summary", 
+		"ref":"",
+                "columns": [
+                    "State Code",
+                    "County Code",
+                    "Site Num",
+                    "Parameter Code",
+                    "POC",
+                    "Latitude",
+                    "Longitude",
+                    "Datum",
+                    "Parameter Name",
+                    "Sample Duration",
+                    "Pollutant Standard",
+                    "Date Local",
+                    "Units of Measure",
+                    "Event Type",
+                    "Observation Count",
+                    "Observation Percent",
+                    "Arithmetic Mean",
+                    "1st Max Value",
+                    "1st Max Hour",
+                    "AQI",
+                    "Method Code",
+                    "Method Name",
+                    "Local Site Name",
+                    "Address",
+                    "State Name",
+                    "County Name",
+                    "City Name",
+                    "CBSA Name",
+                    "Date of Last Change"
+                ],
+                "gtype_columns":[],
+                "layouts":[
+                    {
+                        "name":"approxlat_approxlng_yyyy_mm",
+			"method_name": "",
+                        "keys":[
+                            "Latitude",
+                            "Longitude",
+                            "Date Local"
+                        ],
+                        "gtype_keys":[
+                            "Latitude.ApproxLat",
+                            "Longitude.ApproxLng",
+                            "DateTime.Year",
+                            "Datetime.MonthStr"
+                        ],
+                        "max_chunk_length": "250000",
+			"sort_order" : "desc"
+                    },
+                    {
+                        "name":"yyyy_mm_approxlat_approxlng",
+			"method_name": "",
+                        "keys":[
+                            "Date Local",
+                            "Latitude",
+                            "Longitude"
+                        ],
+                        "gtype_keys":[
+                            "DateTime.Year",
+                            "Datetime.MonthStr",
+                            "Latitude.ApproxLat",
+                            "Longitude.ApproxLng"
+                        ],
+                        "max_chunk_length": "250000",
+			"sort_order" : "desc"
+                    }
+                ]
+                    
+                
+            },
+	    {
+                "name": "so2_daily_summary", 
+		"ref": "ozone_daily_summary"
+	    },	
+	    {
+                "name": "co_daily_summary", 
+		"ref": "ozone_daily_summary"
+	    },	
+	    {
+                "name": "no2_daily_summary", 
+		"ref": "ozone_daily_summary"
+	    }	
+
+        ]
+
+    }
+
+}
