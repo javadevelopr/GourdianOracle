@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 04,2020
 #
-# Last Modified: Thu Feb  6 01:16:38 2020
+# Last Modified: Mon Feb 10 20:05:48 2020
 #
 # Author: samolof
 #
@@ -12,27 +12,10 @@
 ##################################################################
 import boto3
 import json
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, functions as sqlFunctions
+from pyspark.sql import dataframe
 from gourdian import gytpes
 
-
-def approxlat_approxlng_yyyy_mm:
-    pass
-
-def yyyy_mm_approxlat_approxlng( fn: callable, *args):
-    #fn is a method  that takes in *args (input column names, output column names) and
-    #
-    
-    return partial(fn)
-    pass
-
-LayoutHandlers = {
-
-    'approxlat_approxlng_yyyy_mm' : approxlat_approxlng_yyyy_mm,
-    'yyyy_mm_approxlat_approxlng' : yyyy_mm_approxlat_approxlng
-
-
-}
 
 
 def parseLayout(layout: dict, columns: list, gtype_columns: list):
@@ -65,16 +48,50 @@ def __getPartitionHash():
     pass
 
 
+
+def noaa_transform(df: dataframe.Dataframe):
+    pass
+
+
+
+def epa_aqs_transform(df: dataframe.Dataframe ):
+
+    #rename columns
+    df = df.withColumnRenamed('Date Local','Date')
+
+
+    #split columns
+
+
+    #drop columns
+
+
+    #change Type?
+
+
+
 #To do transform column types to Gtypes
+#df = spark.read.load("s3a://insight-gourdian-epaaqs-co/*.csv", format="csv", sep=",", inferSchema="true", header="true")
+from typing import Union
 class Chunker:
-    def __init__(self, path, layout_name, layoutKeys, columns, sortOrder = "desc", transform: callable = None ):
+    def __init__(self, 
+            path: pathlib.Path,
+            layout_name : str, 
+            layoutKeys : list, 
+            columns: list,
+            newColumns: list = None
+            sortOrder: str = "desc", 
+            transform: callable = None, 
+            partitioner: callable = None):
+
         self.path = path
         self.layout_name = layout_name
         self.layoutKeys = layoutKeys
-        self.columns = columns
         self.max_chunk_length = max_chunk_length
         self.sortOrder = sortOrder
+        self.partitioner = partitioner
 
+    
         #obviously will generalize this
         sparkDF = spark.read.load(path)
             .format('csv')
@@ -84,23 +101,33 @@ class Chunker:
 
         #get rid of unneeded columns
         sparkDF = sparkDF.select(columns)
+            
+
+        #change column names
+        if newColumns:
+            assert (len(columns) == len(newColumns)) 
+            for c,n in zip(columns, newColumns):
+                sparkDF = sparkDF.withColumnRenamed(c, n)
+    
 
         #finally transform columns using passed callable
-        self.sparkDF = transform(sparkDF)
+        if transform:
+            self.sparkDF = transform(sparkDF)
+        else
+            self.sparkDF = sparkDF
+
 
     def partition(self):
         #sort
-        sortOrderStr = "desc" in self.sortOrder and "desc" or ""
-        _stk = []
-        for k in self.layoutKeys:
-            _stk.append(k + " " + sortOrderStr)
+        #sortOrderStr = "desc" in self.sortOrder and "desc" or ""
+        #_stk = []
+        #for k in self.layoutKeys:
+        #    _stk.append(k + " " + sortOrderStr)
         
-        sortedDF = self.sparkDF.orderBy(*_stk)
-
-        
+        #sortedDF = self.sparkDF.orderBy(*_stk)
 
         #partition by key and checking max_chunks   
-        key = divideByLatitude
+        self.sparkDF.rdd.partitionBy(  , self.partitioner) 
 
 
     
