@@ -1,0 +1,51 @@
+
+gtype_column: ['Datetime.YearStr', 'Datetime.MonthStr', 'Latitude.ApproxLat', 'Latitude.ApproxLng']
+
+dataset
+	name
+	sources: []
+		name
+		layouts: []
+			chunks
+				filename
+				first_label: []
+				last_label: []
+				num_rows:
+			name
+			label_columns: []
+				gtype_column:
+		tables: []
+			name:
+			columns: []
+			
+
+
+dataset  
+	name
+	source: []
+		name
+		keys: []
+		layouts: []
+			name: 		
+			method_name:
+			keys
+			gtype_keys:
+			max_chunk_size:
+		columns:[]
+		gtype_columns:[]
+			
+
+
+dataset  
+	name
+	source: []
+		name:
+		ref:
+		keys: []
+		columns:[]
+		layouts: []
+			name: 		
+			transform:
+			keys
+			sort_order:
+			max_chunk_size:
