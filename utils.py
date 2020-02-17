@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Mon Feb 17 11:30:31 2020
+# Last Modified: Mon Feb 17 12:02:01 2020
 #
 # Author: samolof
 #
@@ -16,21 +16,47 @@ import datetime
 import hashlib
 import os
 import tempfile
+import logging
 
 
-def tag(dataset: str,source : str, keyColumnName: str, key:str, canonicalChunkTag: str = None) -> str:
+def tag(dataset: str,source : str, keyColumnName: str, keyValue:str, canonicalChunkTag: str = None) -> str:
     """
     Creates a 'tag' for a chunk or diff chunk:
-    Tag = hash(dataset.source.keyColumnName.key).(canonicalChunkTag if any).(timestamp)
+    Tag = hash(dataset.source.keyColumnName.keyValue).(canonicalChunkTag if any).(timestamp)
     """
 
-    b = f"{dataset}.{source}.{keyColumnName}.{key}"
+    b = f"{dataset}.{source}.{keyColumnName}.{keyValue}"
     base = hashlib.md5(b.encode('utf-8')).hexdigest
     ext=datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     
     base = (canonicalChunkTag and f"{base}.{canonicalChunkTag}") or base
 
     return f"{base}.{ext}"
+
+
+
+def moveAndTagS3Chunks(dataset: str, source: str, keyColumnName: str, s3bucketName: str, s3bucketPrefix: str):
+    """ 
+    Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
+    move the output files produced by it
+    """
+
+
+    s3 = S3Operator(s3bucketName)
+
+    files = s3.getObjNames(s3bucketPrefix)
+
+    for f in files:
+        #Get the key value from Spark output folder name
+        keyValue = os.path.basename(os.path.dirname(f)).split('=')[1]
+        fileTag = tag(dataset, source, keyColumnName, keyValue)
+
+        #move file to top-level of bucket with fileTag as new filename
+        s3.move(f,fileTag)
+        logging.info(f"Moved {f} to {s3bucketName}/{fileTag}")
+        
+
+
 
 
 class S3Operator(object):
@@ -72,5 +98,9 @@ class S3Operator(object):
         return tempdir + "/" + os.path.basename(s3objName)
 
     def moveFile(self, s3srcPath, s3destPath):
-        self.s3.Object(self.bucket.name, s3destPath).copy_from(CopySource=s3destPath)
-        self.s3.Object(self.bucket.name, s3srcPath).delete()
+        #self.s3.Object(self.bucket.name, s3destPath).copy_from(CopySource=s3destPath)
+        #self.s3.Object(self.bucket.name, s3srcPath).delete()
+
+        #s3 access configuration not working for me so have to temporarily download then upload file to move
+        localFilePath = self.download(s3srcPath)
+        self.upload(localFilePath, s3destPath)
