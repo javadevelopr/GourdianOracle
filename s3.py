@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Mon Feb 17 12:02:01 2020
+# Last Modified: Mon Feb 17 12:17:35 2020
 #
 # Author: samolof
 #
@@ -26,7 +26,7 @@ def tag(dataset: str,source : str, keyColumnName: str, keyValue:str, canonicalCh
     """
 
     b = f"{dataset}.{source}.{keyColumnName}.{keyValue}"
-    base = hashlib.md5(b.encode('utf-8')).hexdigest
+    base = hashlib.md5(b.encode('utf-8')).hexdigest()
     ext=datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     
     base = (canonicalChunkTag and f"{base}.{canonicalChunkTag}") or base
