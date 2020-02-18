@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 17 21:46:22 2020
+# Last Modified: Mon Feb 17 23:18:32 2020
 #
 # Author: samolof
 #
@@ -14,13 +14,13 @@ import boto3
 from pyspark.sql import SparkSession
 #from pyspark.sql.functions import round 
 from pyspark.sql import dataframe as Dataframe
-from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType
+from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType, TimeStampType
 from functools import partial
 from typing import Union
 from gourdian import gtypes
 import logging
 
-tempColumnName="_0e02_c39fb0d2a21963b"
+TMP_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
 
 
 
@@ -31,8 +31,7 @@ class Chunker:
             path: str,
             columns: dict,
             keyColumns : list, 
-            sortOrder: str = "desc", 
-            keyFunction: callable = None,
+            sortAscending: bool = False, 
             transform: callable = None,
             inputformat: str = "csv",
             hasHeader: bool = True,
@@ -44,11 +43,10 @@ class Chunker:
         self.path = path
         self.columns = columns
         self.max_chunk_length = max_chunk_length
-        self.sortOrder = sortOrder
-        self.keyFunction = keyFunction
+        self.sortAscending = sortAscending
 
     
-        #obviously will generalize this
+        #Probably generalize this more
         df = spark.read.load(path)
             .format(inputformat)
             .option('header', hasHeader)
@@ -66,26 +64,34 @@ class Chunker:
             df = df.withColumnRenamed(columns[c])
 
         self.keyColumns = list( map(lambda k: columns[k], keyColumns))
-    
+        self.partitionKeyColumns = []
 
         #finally transform columns using passed callable
         if transform:
-            self.sparkDF = transform(sparkDF)
-        else
-            self.sparkDF = sparkDF
+            df = transform(sparkDF)
+            
+        self.df = df
 
+
+
+    def createPartitionColumn(self, columnName : str, 
+            columnType: Union[IntegerType,DoubleType, StringType, TimeStampType],
+            keyFunction: callable = None 
+        ):
+
+        newColumnName = TMP_COLUMN_NAME_PREFIX + columnName 
+        
+        schema = StructType(self.df.schema.fields + [StructField(newColumnName, columnType, True)])
+        if keyFunction:
+            self.df = self.df.rdd.map(lambda x: x + (keyFunction(x[columnName]),)).toDF(schema=schema)
+        else
+            self.df = self.df.rdd.map(lambda x: x + (x[columnName]),).toDF(schema=schema)
+
+        self.partitionKeyColumns.append(newColumnName)
 
     def partition(self):
-        #sort
-        #sortOrderStr = "desc" in self.sortOrder and "desc" or ""
-        #_stk = []
-        #for k in self.layoutKeys:
-        #    _stk.append(k + " " + sortOrderStr)
-        
-        #sortedDF = self.sparkDF.orderBy(*_stk)
+        self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
 
-        #partition by key and checking max_chunks   
-        self.sparkDF.rdd.partitionBy(  , self.partitioner) 
-
+    def writePartitions(self):
 
     
