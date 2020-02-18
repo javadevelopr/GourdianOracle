@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 17 19:56:42 2020
+# Last Modified: Mon Feb 17 21:46:22 2020
 #
 # Author: samolof
 #
@@ -12,14 +12,17 @@
 ##################################################################
 import boto3
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import round
+#from pyspark.sql.functions import round 
 from pyspark.sql import dataframe as Dataframe
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType
 from functools import partial
 from typing import Union
 from gourdian import gtypes
+import logging
 
 tempColumnName="_0e02_c39fb0d2a21963b"
+
+
 
 class Chunker:
     def __init__(self, 

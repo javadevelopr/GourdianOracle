@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 17 14:38:52 2020
+# Last Modified: Mon Feb 17 20:01:43 2020
 #
 # Author: samolof
 #
@@ -12,12 +12,18 @@
 ##################################################################
 import pyspark
 from functools import partial
+from pyspark.sql.functions import round
 from gourdian import gtypes
 
 
-latLongPartitioner = lambda x: pyspark.sql.functions.round(x) #round to nearest line of latitude
+latPartitioner = lambda x: round(x,scale=1) 
 
-epa_aqs_DatePartitioner = lambda x: x  #do nothing, already rounded to nearest day
+#round to nearest meridien
+longPartitioner = lambda x: round(x)
+
+
+#do nothing, already rounded to nearest day
+epa_aqs_DatePartitioner = lambda x: x  
 
 
 

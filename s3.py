@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Mon Feb 17 12:17:35 2020
+# Last Modified: Mon Feb 17 21:44:51 2020
 #
 # Author: samolof
 #
@@ -19,13 +19,13 @@ import tempfile
 import logging
 
 
-def tag(dataset: str,source : str, keyColumnName: str, keyValue:str, canonicalChunkTag: str = None) -> str:
+def tag(dataset: str,source : str, keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
     """
     Creates a 'tag' for a chunk or diff chunk:
-    Tag = hash(dataset.source.keyColumnName.keyValue).(canonicalChunkTag if any).(timestamp)
+    Tag = hash(dataset.source.keyColumn1:keyValue1|[keyColumn2:keyValue2|... ].[canonicalChunkTag].timestamp
     """
 
-    b = f"{dataset}.{source}.{keyColumnName}.{keyValue}"
+    b = f"{dataset}.{source}." + "|".join(x + ":" + y for x,y in zip(keyColumns, keyValues))
     base = hashlib.md5(b.encode('utf-8')).hexdigest()
     ext=datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     
@@ -35,11 +35,20 @@ def tag(dataset: str,source : str, keyColumnName: str, keyValue:str, canonicalCh
 
 
 
-def moveAndTagS3Chunks(dataset: str, source: str, keyColumnName: str, s3bucketName: str, s3bucketPrefix: str):
+
+def moveAndTagS3Chunks(dataset: str, source: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str):
     """ 
     Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
     move the output files produced by it
     """
+
+
+    def _getKeyValuesFromDirName(dirname):
+        res = []
+        keys = dirname.split('/')
+        for k in keys: 
+            res.append(k.split('=')[1])
+        return res
 
 
     s3 = S3Operator(s3bucketName)
@@ -48,8 +57,9 @@ def moveAndTagS3Chunks(dataset: str, source: str, keyColumnName: str, s3bucketNa
 
     for f in files:
         #Get the key value from Spark output folder name
-        keyValue = os.path.basename(os.path.dirname(f)).split('=')[1]
-        fileTag = tag(dataset, source, keyColumnName, keyValue)
+        keyValues = _getKeyValuesFromDirName(os.bath.dirname(f))
+
+        fileTag = tag(dataset, source, keyColumns, keyValues)
 
         #move file to top-level of bucket with fileTag as new filename
         s3.move(f,fileTag)
