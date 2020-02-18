@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 17 23:18:32 2020
+# Last Modified: Mon Feb 17 23:54:07 2020
 #
 # Author: samolof
 #
@@ -19,12 +19,16 @@ from functools import partial
 from typing import Union
 from gourdian import gtypes
 import logging
+from s3 import moveAndTagS3Chunks
+from config import *
 
-TMP_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
 
 
 
 class Chunker:
+
+    TMP_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
+    
     def __init__(self, 
             dataset: str,
             source : str,
@@ -66,13 +70,13 @@ class Chunker:
         self.keyColumns = list( map(lambda k: columns[k], keyColumns))
         self.partitionKeyColumns = []
 
-        #finally transform columns using passed callable
+        #finally transform columns using passed callable if any
         if transform:
-            df = transform(sparkDF)
+            df = transform(df)
             
         self.df = df
 
-
+        self.isPartitioned = False
 
     def createPartitionColumn(self, columnName : str, 
             columnType: Union[IntegerType,DoubleType, StringType, TimeStampType],
@@ -91,7 +95,19 @@ class Chunker:
 
     def partition(self):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
+        self.isPartitioned = True
 
-    def writePartitions(self):
+    def writeParquetPartitions(self):
+        if not self.isPartitioned:
+            self.partition()
 
-    
+        destinationPath = "s3a://" + AWS_CHUNK_STORE_BUCKET + "/" + AWS_TMP_CHUNK_STORE_PATH
+        writer = self.df.write.partitionBy(*self.partitionKeyColumns)
+        writer.parquet(destinationPath, mode="overwrite")
+
+        moveAndTagS3Chunks(self.dataset, self.source, self.keyColumns, AWS_CHUNK_STORE_BUCKET, AWS_TMP_CHUNK_STORE_PATH)
+
+        print("================Partitions succesfully uploaded to S3=============")
+
+    def writeCSVPartitions(self):
+        pass
