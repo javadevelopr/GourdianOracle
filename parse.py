@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 04,2020
 #
-# Last Modified: Mon Feb 10 20:05:48 2020
+# Last Modified: Mon Feb 17 14:47:57 2020
 #
 # Author: samolof
 #
@@ -72,65 +72,6 @@ def epa_aqs_transform(df: dataframe.Dataframe ):
 
 #To do transform column types to Gtypes
 #df = spark.read.load("s3a://insight-gourdian-epaaqs-co/*.csv", format="csv", sep=",", inferSchema="true", header="true")
-from typing import Union
-class Chunker:
-    def __init__(self, 
-            path: pathlib.Path,
-            layout_name : str, 
-            layoutKeys : list, 
-            columns: list,
-            newColumns: list = None
-            sortOrder: str = "desc", 
-            transform: callable = None, 
-            partitioner: callable = None):
-
-        self.path = path
-        self.layout_name = layout_name
-        self.layoutKeys = layoutKeys
-        self.max_chunk_length = max_chunk_length
-        self.sortOrder = sortOrder
-        self.partitioner = partitioner
-
-    
-        #obviously will generalize this
-        sparkDF = spark.read.load(path)
-            .format('csv')
-            .option('header','true')
-            .option('delimiter', ",")
-            .option('inferSchema', "true")
-
-        #get rid of unneeded columns
-        sparkDF = sparkDF.select(columns)
-            
-
-        #change column names
-        if newColumns:
-            assert (len(columns) == len(newColumns)) 
-            for c,n in zip(columns, newColumns):
-                sparkDF = sparkDF.withColumnRenamed(c, n)
-    
-
-        #finally transform columns using passed callable
-        if transform:
-            self.sparkDF = transform(sparkDF)
-        else
-            self.sparkDF = sparkDF
-
-
-    def partition(self):
-        #sort
-        #sortOrderStr = "desc" in self.sortOrder and "desc" or ""
-        #_stk = []
-        #for k in self.layoutKeys:
-        #    _stk.append(k + " " + sortOrderStr)
-        
-        #sortedDF = self.sparkDF.orderBy(*_stk)
-
-        #partition by key and checking max_chunks   
-        self.sparkDF.rdd.partitionBy(  , self.partitioner) 
-
-
-    
             
 
 
