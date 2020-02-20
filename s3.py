@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Mon Feb 17 23:53:59 2020
+# Last Modified: Thu Feb 20 09:35:47 2020
 #
 # Author: samolof
 #
@@ -19,13 +19,13 @@ import tempfile
 import logging
 
 
-def tag(dataset: str,source : str, keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
+def tag(dataset: str,source : str, tableName: str,  keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
     """
     Creates a 'tag' for a chunk or diff chunk:
-    Tag = hash(dataset.source.keyColumn1:keyValue1|[keyColumn2:keyValue2|... ].[canonicalChunkTag].timestamp
+    Tag = hash(dataset.source.tableName.keyColumn1:keyValue1|[keyColumn2:keyValue2|... ].[canonicalChunkTag].timestamp
     """
 
-    b = f"{dataset}.{source}." + "|".join(x + ":" + y for x,y in zip(keyColumns, keyValues))
+    b = f"{dataset}.{source}.{tableName}" + "|".join(x + ":" + y for x,y in zip(keyColumns, keyValues))
     base = hashlib.md5(b.encode('utf-8')).hexdigest()
     ext=datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
     
@@ -36,7 +36,7 @@ def tag(dataset: str,source : str, keyColumns:list, keyValues:list, canonicalChu
 
 
 
-def moveAndTagS3Chunks(dataset: str, source: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str):
+def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str):
     """ 
     Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
     move the output files produced by it. 
