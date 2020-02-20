@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Wed Feb 19 14:33:44 2020
+# Last Modified: Mon Feb 17 23:53:59 2020
 #
 # Author: samolof
 #
@@ -17,7 +17,6 @@ import hashlib
 import os
 import tempfile
 import logging
-import exrex
 
 
 def tag(dataset: str,source : str, keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
@@ -86,15 +85,6 @@ class S3Operator(object):
         for obj in self.bucket.objects.filter(Prefix=prefix):
             fileNames.append(obj.key)
 
-        return fileNames
-
-    def getObjNamesMatching(self, regxpat ):
-        fileNames = []
-        prefixes = list(exrex.generate(regxpat))
-
-        #have to add sanity check here
-        for prefix in prefixes:
-            fileNames += list(map(lambda obj: obj.key, self.bucket.objects.filter(Prefix=prefix)))
         return fileNames
 
     def upload(self, filename, s3path, bucketName=None):
