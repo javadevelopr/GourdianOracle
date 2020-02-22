@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Sat Feb 22 10:14:52 2020
+# Last Modified: Sat Feb 22 11:22:12 2020
 #
 # Author: samolof
 #
@@ -45,8 +45,13 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
 
 
     def _getKeyValuesFromDirName(dirname):
+
+
+
         res = []
-        keys = dirname.split('/')
+        keys = dirname.split('/')[1:]
+        
+
         for k in keys: 
             res.append(k.split('=')[1])
         return res
@@ -57,10 +62,13 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
     files = s3.getObjNames(s3bucketPrefix)
 
     for f in files:
-        #Get the key value from Spark output folder name
-        keyValues = _getKeyValuesFromDirName(os.bath.dirname(f))
 
-        fileTag = tag(dataset, source, keyColumns, keyValues)
+        #Get the key value from Spark output folder name
+        dirname = os.path.dirname(f).replace(s3bucketPrefix,'')
+
+        keyValues = _getKeyValuesFromDirName(dirname)
+
+        fileTag = tag(dataset = dataset, source = source, tableName = tableName, keyColumns = keyColumns, keyValues = keyValues)
 
         #move file to top-level of bucket with fileTag as new filename
         #s3.moveFile(f,fileTag)
@@ -74,12 +82,12 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
 class S3Operator(object):
     
     def __init__(self, bucketName):
-        access_key_id=os.environ['AWS_ACCESS_KEY_ID']
-        secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
+        #access_key_id=os.environ['AWS_ACCESS_KEY_ID']
+        #secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
 
         self.s3 = boto3.resource('s3')
         self.s3c = boto3.client('s3')
-        self.bucket = s3.Bucket(bucketName)
+        self.bucket = self.s3.Bucket(bucketName)
         self.bucketName = self.bucket.name
 
     def getObjNames(self, prefix):
