@@ -22,11 +22,12 @@ total_rows ={}
 import time
 start_time = time.time()
 for source in epa_sources + noaa_sources:
+    sub_start_time = time.time()
     df = spark.read.format("csv").options(header="true", inferSchema="true", sep=",").load(source)
 
     count = df.count()
     total_rows[source] = count
-    print(f"Finished {source}\nTime: {time.time() - start_time}")
+    print(f"Finished {source}\nTime: {time.time() - sub_start_time}")
 
 
 print("Done")

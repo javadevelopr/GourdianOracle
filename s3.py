@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Thu Feb 20 09:35:47 2020
+# Last Modified: Sat Feb 22 10:14:52 2020
 #
 # Author: samolof
 #
@@ -63,7 +63,8 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
         fileTag = tag(dataset, source, keyColumns, keyValues)
 
         #move file to top-level of bucket with fileTag as new filename
-        s3.move(f,fileTag)
+        #s3.moveFile(f,fileTag)
+        s3.copyFile(f,fileTag)
         logging.info(f"Moved {f} to {s3bucketName}/{fileTag}")
         
 
@@ -79,6 +80,7 @@ class S3Operator(object):
         self.s3 = boto3.resource('s3')
         self.s3c = boto3.client('s3')
         self.bucket = s3.Bucket(bucketName)
+        self.bucketName = self.bucket.name
 
     def getObjNames(self, prefix):
         fileNames = []
@@ -108,10 +110,11 @@ class S3Operator(object):
         
         return tempdir + "/" + os.path.basename(s3objName)
 
-    def moveFile(self, s3srcPath, s3destPath):
-        #self.s3.Object(self.bucket.name, s3destPath).copy_from(CopySource=s3destPath)
-        #self.s3.Object(self.bucket.name, s3srcPath).delete()
+    def copyFile(self, s3srcPath, s3destPath):
+        srcPath = f"{self.bucket.name}/{s3srcPath}"
+        self.s3.Object(self.bucket.name, s3destPath).copy_from(CopySource=srcPath)
 
-        #s3 access configuration not working for me so temporary fix: download then upload file to move
-        localFilePath = self.download(s3srcPath)
-        self.upload(localFilePath, s3destPath)
+    def moveFile(self, s3srcPath, s3destPath):
+        self.copyFile(s3srcPath, s3destPath)
+        self.s3.Object(self.bucket.name, s3srcPath).delete()
+    
