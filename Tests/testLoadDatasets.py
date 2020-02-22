@@ -11,9 +11,9 @@ spark = SparkSession.builder.appName("GourdianTestLoad").getOrCreate()
 import time
 #time.sleep(200)
 
-epa_sources= map(lambda s: f"s3a://insight-gourdian-epaaqs-{s}/*.csv", [
+epa_sources= list(map(lambda s: f"s3a://insight-gourdian-epaaqs-{s}/*.csv", [
     "ozone", "no2","so2","co"
-])
+]))
 
 
 noaa_sources = [ "s3a://insight-gourdian-noaa-global-summary-of-day-joined/*.csv" ]
