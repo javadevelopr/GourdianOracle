@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Thu Feb 20 14:05:26 2020
+# Last Modified: Sat Feb 22 21:56:03 2020
 #
 # Author: samolof
 #
@@ -22,6 +22,7 @@ from typing import Union
 from gourdian import gtypes
 import logging
 from s3 import moveAndTagS3Chunks
+from tagger import tag
 from config import *
 
 class _ListParam(AccumulatorParam):
@@ -113,6 +114,22 @@ class Chunker:
         #write manifest
 
 
+    def _getPartitionTag(self):
+        if not self.isPartitioned:
+            self.partition()
+        
+        def __tag(it):
+            pass
+
+
+    def diff(self): 
+        #Get partition Tag
+        pass
+
+
+
+
+
     def getFirstAndLastChunkRows(self):
         first_and_last_rows_ac = sc.accumulator([], _ListParam())
 
@@ -145,7 +162,6 @@ class Chunker:
 
         moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, AWS_CHUNK_STORE_BUCKET, AWS_TMP_CHUNK_STORE_PATH)
 
-        print("================Partitions succesfully uploaded to S3=============")
 
     def writeCSVPartitions(self):
         pass

@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Sat Feb 22 11:22:12 2020
+# Last Modified: Sat Feb 22 12:12:17 2020
 #
 # Author: samolof
 #
@@ -17,26 +17,10 @@ import hashlib
 import os
 import tempfile
 import logging
+from tagger import tag
 
 
-def tag(dataset: str,source : str, tableName: str,  keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
-    """
-    Creates a 'tag' for a chunk or diff chunk:
-    Tag = hash(dataset.source.tableName.keyColumn1:keyValue1|[keyColumn2:keyValue2|... ].[canonicalChunkTag].timestamp
-    """
-
-    b = f"{dataset}.{source}.{tableName}" + "|".join(x + ":" + y for x,y in zip(keyColumns, keyValues))
-    base = hashlib.md5(b.encode('utf-8')).hexdigest()
-    ext=datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    
-    base = (canonicalChunkTag and f"{base}.{canonicalChunkTag}") or base
-
-    return f"{base}.{ext}"
-
-
-
-
-def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str):
+def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str, delete:bool = False):
     """ 
     Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
     move the output files produced by it. 
@@ -45,9 +29,6 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
 
 
     def _getKeyValuesFromDirName(dirname):
-
-
-
         res = []
         keys = dirname.split('/')[1:]
         
@@ -71,8 +52,11 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
         fileTag = tag(dataset = dataset, source = source, tableName = tableName, keyColumns = keyColumns, keyValues = keyValues)
 
         #move file to top-level of bucket with fileTag as new filename
-        #s3.moveFile(f,fileTag)
-        s3.copyFile(f,fileTag)
+        if delete:
+            s3.moveFile(f,fileTag)
+        else:
+            s3.copyFile(f,fileTag)
+
         logging.info(f"Moved {f} to {s3bucketName}/{fileTag}")
         
 
@@ -81,9 +65,7 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: li
 
 class S3Operator(object):
     
-    def __init__(self, bucketName):
-        #access_key_id=os.environ['AWS_ACCESS_KEY_ID']
-        #secret_access_key = os.environ['AWS_SECRET_ACCESS_KEY']
+    def __init__(self, bucketName: str, aws_access_id: str=None, aws_secret_access_key: str=None):
 
         self.s3 = boto3.resource('s3')
         self.s3c = boto3.client('s3')
@@ -93,7 +75,11 @@ class S3Operator(object):
     def getObjNames(self, prefix):
         fileNames = []
         for obj in self.bucket.objects.filter(Prefix=prefix):
-            fileNames.append(obj.key)
+            key = obj.key
+            if os.path.basename(key) == '_SUCCESS': #ignore Spark special file 
+                continue
+
+            fileNames.append(key)
 
         return fileNames
 
@@ -101,7 +87,6 @@ class S3Operator(object):
         bucketName = bucketName or self.bucket.name
         try:
             selfs3c.upload_file(filename, bucketName, s3path)
-            print(f"Uploaded {filename} to {bucket.name}/{s3path}")
         except OSError as e:
             raise
 
@@ -125,4 +110,4 @@ class S3Operator(object):
     def moveFile(self, s3srcPath, s3destPath):
         self.copyFile(s3srcPath, s3destPath)
         self.s3.Object(self.bucket.name, s3srcPath).delete()
-    
+        
