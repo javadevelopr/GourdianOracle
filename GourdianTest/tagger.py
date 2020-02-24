@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 22,2020
 #
-# Last Modified: Sat Feb 22 12:12:55 2020
+# Last Modified: Mon Feb 24 11:36:07 2020
 #
 # Author: samolof
 #
@@ -16,7 +16,9 @@ import hashlib
 import os
 import tempfile
 
-def tag(dataset: str,source : str, tableName: str,  keyColumns:list, keyValues:list, canonicalChunkTag: str = None) -> str:
+from typing import List, Optional
+
+def tag(dataset: str,source : str, tableName: str,  keyColumns:List[str], keyValues:List[str], canonicalChunkTag: Optional[str] = None) -> str:
     """
     Creates a 'tag' for a chunk or diff chunk:
     Tag = hash(dataset.source.tableName.keyColumn1:keyValue1|[keyColumn2:keyValue2|... ].[canonicalChunkTag].timestamp

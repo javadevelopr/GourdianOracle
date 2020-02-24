@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Sat Feb 22 12:12:17 2020
+# Last Modified: Mon Feb 24 11:34:39 2020
 #
 # Author: samolof
 #
@@ -18,9 +18,10 @@ import os
 import tempfile
 import logging
 from tagger import tag
+from typing import Union, List, Dict, Optional, Callable
 
 
-def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: list, s3bucketName: str, s3bucketPrefix: str, delete:bool = False):
+def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: List[str], s3bucketName: str, s3bucketPrefix: str, delete:bool = False):
     """ 
     Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
     move the output files produced by it. 
@@ -72,7 +73,7 @@ class S3Operator(object):
         self.bucket = self.s3.Bucket(bucketName)
         self.bucketName = self.bucket.name
 
-    def getObjNames(self, prefix):
+    def getObjNames(self, prefix: str):
         fileNames = []
         for obj in self.bucket.objects.filter(Prefix=prefix):
             key = obj.key
@@ -83,14 +84,14 @@ class S3Operator(object):
 
         return fileNames
 
-    def upload(self, filename, s3path, bucketName=None):
+    def upload(self, filename:str, s3path:str, bucketName: Optional[str]=None):
         bucketName = bucketName or self.bucket.name
         try:
             selfs3c.upload_file(filename, bucketName, s3path)
         except OSError as e:
             raise
 
-    def download(self, s3objName):
+    def download(self, s3objName:str):
         currentdir = os.getcwd()
         try:
             tempdir = tempfile.gettempdir()
@@ -103,11 +104,11 @@ class S3Operator(object):
         
         return tempdir + "/" + os.path.basename(s3objName)
 
-    def copyFile(self, s3srcPath, s3destPath):
+    def copyFile(self, s3srcPath:str, s3destPath:str):
         srcPath = f"{self.bucket.name}/{s3srcPath}"
         self.s3.Object(self.bucket.name, s3destPath).copy_from(CopySource=srcPath)
 
-    def moveFile(self, s3srcPath, s3destPath):
+    def moveFile(self, s3srcPath:str, s3destPath:str):
         self.copyFile(s3srcPath, s3destPath)
         self.s3.Object(self.bucket.name, s3srcPath).delete()
         

@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 24 10:51:30 2020
+# Last Modified: Mon Feb 24 15:50:31 2020
 #
 # Author: samolof
 #
@@ -13,18 +13,23 @@
 import boto3
 from pyspark.sql import SparkSession
 from pyspark.sql import dataframe as Dataframe
-from pyspark.sql.functions import first,last,round as spark_round, sha1 as spark_sha1
-from pyspark.sql.functions import concat_ws as spark_concat_ws
+from pyspark.sql.functions import round as spark_round, sha1 as spark_sha1
+from pyspark.sql.functions import concat_ws as spark_concat_ws, lit as spark_lit
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType, TimeStampType
 from pyspark.accumulators import AccumulatorParam
 from functools import partial
+from enum import Enum
 from gourdian import gtypes
 import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
 from config import *
 
-from typing import Union, List, Dict, Optional
+class DiffCode(Enum):
+    deletion = 0
+    addition = 1
+
+
 
 class _ListParam(AccumulatorParam):
     """Creates a list accumulator for Spark """
@@ -33,10 +38,15 @@ class _ListParam(AccumulatorParam):
         l1.extend(l2)
         return l1
 
-PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
-HASH_COLUMN_NAME="__SHA1_KEY"
+PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
+HASH_COLUMN_NAME="__GSHA1_KEY_"
+DIFF_CODE_COLUMN_NAME="__GACTION_"
 
 
+
+SAVE_MODE="overwrite"
+
+from typing import Union, List, Dict, Optional, Callable
 
 class Chunker:
 
@@ -48,9 +58,9 @@ class Chunker:
             path: str,
             columns: Dict[str,str],
             keyColumns : List[str], 
-            keyFunctions: Dict[str, callable]={},
-            sortAscending: bool = False, 
-            transform: callable = None,
+            keyFunctions: Optional[ Dict[str, callable] ]={},
+            sortAscending: Optional[bool] = False, 
+            transform: Optional[ Callable[[Dataframe], Dataframe] ] = None,
             inputformat: str = "csv",
             hasHeader: bool = True,
             inputDelimiter: str = ","
@@ -124,27 +134,42 @@ class Chunker:
         self.df = self.df.withColumn(HASH_COLUMN_NAME, spark_sha1(spark_concat_ws("", *self.df.columns)))
 
 
+    def __fetchCanonDF(self):
+        pass
+
+
+    def __fixColumnNamesForParquet(self):
+        newCols = []
+        disallowed = ',;{}()='
+        for column in self.df.columns:
+            column = column.lower()
+            column = column.replace(' ', '_')
+            for c in disallowed:
+                column = column.replace(c,'')
+            
+            newCols.append(column)
+        self.df = self.df.toDF(*newCols)
+
     def partition(self):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
         self.isPartitioned = True
 
         #get first and last label
-
         #write manifest
 
 
-    #def _getPartitionTag(self):
-    #    if not self.isPartitioned:
-    #        self.partition()
-    #    
-    #    def __tag(it):
-    #        pass
-
-
-
     def diff(self): 
-        pass
+        canon_df = self.__fetchCanonDF()
 
+        additions = self.df.subtract(canon_df)
+        deletions = canon_df.subtract(self.df)
+
+        additons = additions.withColumn(DIFF_CODE_COLUMN_NAME, lit(DiffCode.addition))
+        deletions = deletions.withColumn(DIFF_CODE_COLUMN_NAME, lit(DiffCode.deletion))
+
+        #controversial
+        self.df = additions.unionAll(deletions)
+        self.partition()
 
     def getFirstAndLastChunkRows(self):
         first_and_last_rows_ac = sc.accumulator([], _ListParam())
