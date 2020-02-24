@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Sat Feb 22 21:56:03 2020
+# Last Modified: Mon Feb 24 09:31:45 2020
 #
 # Author: samolof
 #
@@ -12,9 +12,9 @@
 ##################################################################
 import boto3
 from pyspark.sql import SparkSession
-#from pyspark.sql.functions import round 
 from pyspark.sql import dataframe as Dataframe
-from pyspark.sql.functions import first,last
+from pyspark.sql.functions import first,last,round as spark_round, sha1 as spark_sha1
+from pyspark.sql.functions import concat_ws as spark_concat_ws
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType, TimeStampType
 from pyspark.accumulators import AccumulatorParam
 from functools import partial
@@ -32,12 +32,13 @@ class _ListParam(AccumulatorParam):
         l1.extend(l2)
         return l1
 
+PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
+HASH_COLUMN_NAME="__SHA1_KEY"
 
 
 
 class Chunker:
 
-    TMP_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b"
     
     def __init__(self, 
             dataset: str,
@@ -90,12 +91,15 @@ class Chunker:
 
         self.isPartitioned = False
 
-    def createPartitionColumn(self, columnName : str, 
+    def __createPartitionColumn(self, 
+            columnName : str, 
             columnType: Union[IntegerType,DoubleType, StringType, TimeStampType],
             keyFunction: callable = None 
         ):
 
-        newColumnName = TMP_COLUMN_NAME_PREFIX + columnName 
+        #have to register keyFunction
+
+        newColumnName = PARTITION_COLUMN_NAME_PREFIX + columnName 
         
         schema = StructType(self.df.schema.fields + [StructField(newColumnName, columnType, True)])
         if keyFunction:
@@ -104,6 +108,11 @@ class Chunker:
             self.df = self.df.rdd.map(lambda x: x + (x[columnName]),).toDF(schema=schema)
 
         self.partitionKeyColumns.append(newColumnName)
+
+    def __addRowHash(self):
+        """Add a column for hash of the row as a superkey"""
+        self.df = self.df.withColumn(HASH_COLUMN_NAME, spark_sha1(spark_concat_ws("", *self.df.columns)))
+
 
     def partition(self):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
@@ -114,20 +123,17 @@ class Chunker:
         #write manifest
 
 
-    def _getPartitionTag(self):
-        if not self.isPartitioned:
-            self.partition()
-        
-        def __tag(it):
-            pass
+    #def _getPartitionTag(self):
+    #    if not self.isPartitioned:
+    #        self.partition()
+    #    
+    #    def __tag(it):
+    #        pass
+
 
 
     def diff(self): 
-        #Get partition Tag
         pass
-
-
-
 
 
     def getFirstAndLastChunkRows(self):
