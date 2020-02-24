@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 24 09:31:45 2020
+# Last Modified: Mon Feb 24 10:51:30 2020
 #
 # Author: samolof
 #
@@ -18,12 +18,13 @@ from pyspark.sql.functions import concat_ws as spark_concat_ws
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType, TimeStampType
 from pyspark.accumulators import AccumulatorParam
 from functools import partial
-from typing import Union
 from gourdian import gtypes
 import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
 from config import *
+
+from typing import Union, List, Dict, Optional
 
 class _ListParam(AccumulatorParam):
     """Creates a list accumulator for Spark """
@@ -45,8 +46,9 @@ class Chunker:
             source : str,
             tableName: str,
             path: str,
-            columns: dict,
-            keyColumns : list, 
+            columns: Dict[str,str],
+            keyColumns : List[str], 
+            keyFunctions: Dict[str, callable]={},
             sortAscending: bool = False, 
             transform: callable = None,
             inputformat: str = "csv",
@@ -80,8 +82,14 @@ class Chunker:
         for c in df.columns:
             df = df.withColumnRenamed(columns[c])
 
+        #need to translate keyColumns to new column names
         self.keyColumns = list( map(lambda k: columns[k], keyColumns))
         self.partitionKeyColumns = []
+
+        #similarly for keyFunctions
+        self.keyFunctions = {}
+        for k,v in keyFunctions:
+            self.keyFunctions[columns[k]] = keyFunctions[k]
 
         #finally transform columns using passed callable if any
         if transform:
@@ -89,25 +97,27 @@ class Chunker:
             
         self.df = df
 
+        #add some internal columns for administration
+        self.__adRowHash()
+        self.__createPartitionColumns()
+
         self.isPartitioned = False
 
-    def __createPartitionColumn(self, 
-            columnName : str, 
-            columnType: Union[IntegerType,DoubleType, StringType, TimeStampType],
-            keyFunction: callable = None 
-        ):
 
-        #have to register keyFunction
+    def __createPartitionColumns(self):
 
-        newColumnName = PARTITION_COLUMN_NAME_PREFIX + columnName 
-        
-        schema = StructType(self.df.schema.fields + [StructField(newColumnName, columnType, True)])
-        if keyFunction:
-            self.df = self.df.rdd.map(lambda x: x + (keyFunction(x[columnName]),)).toDF(schema=schema)
-        else
-            self.df = self.df.rdd.map(lambda x: x + (x[columnName]),).toDF(schema=schema)
+        for column in self.keyColumns:
+            colName = PARTITION_COLUMN_NAME_PREFIX + column
+            kf = self.keyFunctions.get(column)
+            
+            if kf:
+                kf = spark.udf.register(column + "_udf", kf)
+                self.df = self.df.withColumn(colName, kf(self.df[column]))
+            else:
+                self.df = self.df.withColumn(colName, self.df[column])
 
-        self.partitionKeyColumns.append(newColumnName)
+            self.partitionKeyColumns.append(colName)
+
 
     def __addRowHash(self):
         """Add a column for hash of the row as a superkey"""
