@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 24 15:50:31 2020
+# Last Modified: Mon Feb 24 16:01:07 2020
 #
 # Author: samolof
 #
@@ -159,6 +159,9 @@ class Chunker:
 
 
     def diff(self): 
+        """ We run a 2-way subtract to get rows added and rows deleted. Changed rows are just rows simultaenously added to the new version
+            and deleted from the old version.
+        """
         canon_df = self.__fetchCanonDF()
 
         additions = self.df.subtract(canon_df)
