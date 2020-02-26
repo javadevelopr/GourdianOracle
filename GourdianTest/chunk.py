@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Tue Feb 25 17:44:08 2020
+# Last Modified: Wed Feb 26 07:12:43 2020
 #
 # Author: samolof
 #
@@ -25,6 +25,11 @@ from s3 import moveAndTagS3Chunks
 from tagger import tag
 from config import *
 
+PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
+HASH_COLUMN_NAME="__GSHA1_KEY_"
+DIFF_CODE_COLUMN_NAME="__GACTION_"
+SAVE_MODE="overwrite"
+
 class DiffCode(Enum):
     deletion = 0
     addition = 1
@@ -38,16 +43,22 @@ class _ListParam(AccumulatorParam):
         l1.extend(l2)
         return l1
 
-PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
-HASH_COLUMN_NAME="__GSHA1_KEY_"
-DIFF_CODE_COLUMN_NAME="__GACTION_"
+#https://stackoverflow.com/questions/53010507/spark-dataframe-column-naming-conventions-restrictions
+def cleanColumnNamesForParquet(df: Dataframe) -> Dataframe:
+    newColumns = []
+    nchars = ',;{}()='
+    for c in df.columns:
+        c = c.lower()
+        c = c.replace(' ','_')
+        for c in nchars:
+            c = c.replace(c,'')
+        newColumns.append(c)
 
+    df = df.toDF(*newColumns)
+    return df
 
-SAVE_MODE="overwrite"
 
 from typing import Union, List, Dict, Optional, Callable
-
-
 
 class Chunker:
 
