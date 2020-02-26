@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Wed Feb 26 07:12:43 2020
+# Last Modified: Wed Feb 26 08:32:44 2020
 #
 # Author: samolof
 #
@@ -24,6 +24,7 @@ import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
 from config import *
+from typing import Union, List, Dict, Optional, Callable
 
 PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
 HASH_COLUMN_NAME="__GSHA1_KEY_"
@@ -37,7 +38,9 @@ class DiffCode(Enum):
 
 
 class _ListParam(AccumulatorParam):
-    """Creates a list accumulator for Spark """
+    """ Creates a list accumulator for Spark 
+        We need a list accumulator to gather the results of a call we make to forEachPartition()
+    """
     def zero(self, v): return []
     def addInPlace(self, l1, l2):
         l1.extend(l2)
@@ -58,13 +61,11 @@ def cleanColumnNamesForParquet(df: Dataframe) -> Dataframe:
     return df
 
 
-from typing import Union, List, Dict, Optional, Callable
 
 class Chunker:
 
     def _read(filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
-        df = spark.read.
-            .format(inputFormat)
+        df = spark.read.format(inputFormat)
 
         if inputFormat == "csv":
             df = df.option('header', hasHeader and "true" or "false").option('delimiter', inputDelimiter)
@@ -80,9 +81,10 @@ class Chunker:
             path: str,
             columns: Dict[str,str],
             keyColumns : List[str], 
-            keyFunctions: Optional[ Dict[str, callable] ]={},
-            sortAscending: Optional[bool] = False, 
-            transform: Optional[ Callable[[Dataframe], Dataframe] ] = None,
+            keyFunctions: Dict[str, callable] ={},
+            sortAscending: bool = False, 
+            transformColumns: List[str]  = [] ,
+            transformFunction: Optional[ Callable[[Dataframe, Dict[str,str] ], Dataframe] ] = None,
             inputformat: str = "csv",
             hasHeader: bool = True,
             inputDelimiter: str = ","
@@ -97,7 +99,6 @@ class Chunker:
         self.sortAscending = sortAscending
 
     
-        #Probably generalize this more
         df = _read(path)
 
         #get rid of unneeded columns
@@ -106,11 +107,15 @@ class Chunker:
         #drop null for key columns
         df = df.na.drop(subset=keyColumns)
 
-        #change column names including KeyColumns
-        for c in df.columns:
-            df = df.withColumnRenamed(columns[c])
+        #change column names and apply transformations
+        non_transform_columns = [c for c in df.columns if c not in transformColumns]
+        for c in non_transform_columns:
+            if type(columns[c]) == str :
+                df = df.withColumnRenamed(c, columns[c])
+        if transformFunction:        
+            df = transformFunction(df, columns)
 
-        #need to translate keyColumns to new column names
+        #need to translate self.keyColumns to new column names
         self.keyColumns = list( map(lambda k: columns[k], keyColumns))
         self.partitionKeyColumns = []
 
@@ -119,9 +124,6 @@ class Chunker:
         for k,v in keyFunctions:
             self.keyFunctions[columns[k]] = keyFunctions[k]
 
-        #finally transform columns using passed callable if any
-        if transform:
-            df = transform(df)
             
         self.df = df
 

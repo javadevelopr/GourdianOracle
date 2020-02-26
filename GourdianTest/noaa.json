@@ -12,6 +12,8 @@
                     "ELEVATION": "elevation",
                     "NAME" : "name",
                     "TEMP": "temperature",
+                    "MAX": "max_temperature",
+                    "MIN" : "min_temperature",
                     "DEWP" : "dew_point",
                     "SLP" : "sea_level_pressure",
                     "STP" : "station_pressure",
@@ -19,8 +21,6 @@
                     "WDSP" : "wind_speed",
                     "MXSPD": "max_wind_speed_sustained",
                     "GUST" : "max_wind_speed_gust",
-                    "MAX": "max_temperature",
-                    "MIN" : "min_temperature",
                     "PRCP" : "precipitation",
                     "SNDP" : "snow_depth",
                     "FRSHTT": [
@@ -32,10 +32,10 @@
 			    "has_tornado_or_funnel_cloud"
 		    ]
                 },
+		"transform": ["FRSHTT"],
                 "layouts":[
                     {
                         "name":"approxlat_approxlng_yyyy_mm",
-			"transform": "",
                         "keys":[
                             "Latitude",
                             "Longitude",
@@ -46,7 +46,6 @@
                     },
                     {
                         "name":"yyyy_mm_approxlat_approxlng",
-			"transform": "",
                         "keys":[
                             "Date Local",
                             "Latitude",

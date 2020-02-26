@@ -5,24 +5,24 @@
             {
                 "name": "ozone_daily_summary", 
                 "columns": {
-                    "Site Num": "site_num",
+                    "Date Local": "date",
                     "Latitude": "latitiude",
                     "Longitude": "longitude",
                     "Datum": "datum",
+                    "AQI": "aqi",
                     "Parameter Name" : "parameter_name",
-                    "Sample Duration": "sample_duration",
-                    "Pollutant Standard": "pollutant_standard",
-                    "Date Local": "date",
+                    "Arithmetic Mean" : "mean_value",
+                    "1st Max Value" : "max_value",
+                    "1st Max Hour" : "max_hour",
                     "Units of Measure": "units_of_measure",
                     "Event Type": "event_type",
                     "Observation Count" : "observation_count",
                     "Observation Percent" : "observation_percent",
-                    "Arithmetic Mean" : "mean_value",
-                    "1st Max Value" : "max_value",
-                    "1st Max Hour" : "max_hour",
-                    "AQI": "aqi",
+                    "Sample Duration": "sample_duration",
+                    "Pollutant Standard": "pollutant_standard",
                     "Method Code" : "method_code",
                     "Method Name" : "method_name",
+                    "Site Num": "site_num",
                     "Local Site Name" : "local_site_name",
                     "Address" : "address",
                     "State Name": "state_name",
@@ -34,7 +34,6 @@
                 "layouts":[
                     {
                         "name":"approxlat_approxlng_yyyy_mm",
-			"transform": "",
                         "keys":[
                             "Latitude",
                             "Longitude",
@@ -45,7 +44,6 @@
                     },
                     {
                         "name":"yyyy_mm_approxlat_approxlng",
-			"transform": "",
                         "keys":[
                             "Date Local",
                             "Latitude",
