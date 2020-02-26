@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Tue Feb 25 16:08:05 2020
+# Last Modified: Tue Feb 25 17:31:37 2020
 #
 # Author: samolof
 #
@@ -21,6 +21,7 @@ import logging
 from tagger import tag
 from typing import Union, List, Dict, Optional, Callable
 
+_sanitizeFN = lambda f: f.endswith('/') and f.rstrip('/') or f
 
 def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: List[str], s3bucketName: str, s3bucketPrefix: str, delete:bool = False):
     """ 
@@ -66,6 +67,7 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: Li
 
 
 class S3Operator(object):
+    
     
     def __init__(self, bucketName: str, aws_access_id: str=None, aws_secret_access_key: str=None):
 
@@ -120,23 +122,33 @@ class S3Operator(object):
 
 
     def createFolder(self,folderName:str, s3Prefix:str = None ):
-        key = prefix and f"{prefix}/{folderName}/" or f"{folderName}/"
+        if prefix == "": 
+            prefix = None
+
+        key = prefix  and f"{prefix}/{folderName}/" or f"{folderName}/"
         resp = self.s3c.put_object(Bucket=self.bucketName, Key=key)
 
         if  resp['ResponseMetadata']['HTTPStatusCode'] not in range(200,210):
             raise 
 
     def moveAllFilesInFolder(self, s3srcFolder:str, s3destFolder: str):
+        s3srcFolder = _sanitizeFN(s3srcFolder)
+        s3destFolder = _sanitizeFN(s3destFolder)
+
         try:
-            s3.Object(self.bucketName, s3destFolder + "/").load()
+            self.s3.Object(self.bucketName, s3destFolder + "/").load()
 
         except botocore.exceptions.ClientError as e:
             if e.response["Error"]["Code"] == "404":
+                prefix = os.path.dirname(s3destFolder)
+                folderName = os.path.basename(s3desFolder)
+
                 self.createFolder(os.path.basename(s3destFolder), os.path.dirname(s3destFolder))
             else:
                 raise
 
-        fileNames = self.getObjectNames(s3srcFolder)
+        fileNames = self.getObjNames(s3srcFolder, ignoreFolders=True)
         for f in fileNames:
-            self.moveFile(f, s3destFolder)
+            f = os.path.basename(f)
+            self.moveFile(s3srcFolder + f"/{f}", s3destFolder + f"/{f}")
         
