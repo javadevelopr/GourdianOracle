@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Mon Feb 24 11:34:39 2020
+# Last Modified: Tue Feb 25 16:08:05 2020
 #
 # Author: samolof
 #
@@ -11,6 +11,7 @@
 #
 ##################################################################
 import boto3
+import botocore
 from os.path import basename
 import datetime
 import hashlib
@@ -73,14 +74,19 @@ class S3Operator(object):
         self.bucket = self.s3.Bucket(bucketName)
         self.bucketName = self.bucket.name
 
-    def getObjNames(self, prefix: str):
+    def getObjNames(self, prefix: str, ignoreFolders: bool = False):
         fileNames = []
         for obj in self.bucket.objects.filter(Prefix=prefix):
             key = obj.key
             if os.path.basename(key) == '_SUCCESS': #ignore Spark special file 
                 continue
+            if obj.key == prefix + "/": #ignore the base folder itself
+                continue
 
             fileNames.append(key)
+
+        if ignoreFolders:
+            fileNames = list(filter(lambda f: not f.endswith('/'), fileNames))
 
         return fileNames
 
@@ -111,4 +117,26 @@ class S3Operator(object):
     def moveFile(self, s3srcPath:str, s3destPath:str):
         self.copyFile(s3srcPath, s3destPath)
         self.s3.Object(self.bucket.name, s3srcPath).delete()
+
+
+    def createFolder(self,folderName:str, s3Prefix:str = None ):
+        key = prefix and f"{prefix}/{folderName}/" or f"{folderName}/"
+        resp = self.s3c.put_object(Bucket=self.bucketName, Key=key)
+
+        if  resp['ResponseMetadata']['HTTPStatusCode'] not in range(200,210):
+            raise 
+
+    def moveAllFilesInFolder(self, s3srcFolder:str, s3destFolder: str):
+        try:
+            s3.Object(self.bucketName, s3destFolder + "/").load()
+
+        except botocore.exceptions.ClientError as e:
+            if e.response["Error"]["Code"] == "404":
+                self.createFolder(os.path.basename(s3destFolder), os.path.dirname(s3destFolder))
+            else:
+                raise
+
+        fileNames = self.getObjectNames(s3srcFolder)
+        for f in fileNames:
+            self.moveFile(f, s3destFolder)
         

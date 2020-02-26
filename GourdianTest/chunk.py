@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Mon Feb 24 16:01:07 2020
+# Last Modified: Tue Feb 25 13:40:33 2020
 #
 # Author: samolof
 #
@@ -43,14 +43,34 @@ HASH_COLUMN_NAME="__GSHA1_KEY_"
 DIFF_CODE_COLUMN_NAME="__GACTION_"
 
 
-
 SAVE_MODE="overwrite"
 
 from typing import Union, List, Dict, Optional, Callable
 
+
+
+
+def rotateCanon():
+    S3_CANON_PREFIX 
+    s3.move
+
+
+
+
+
 class Chunker:
 
+    def _read(filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
+        df = spark.read.
+            .format(inputFormat)
+
+        if inputFormat == "csv":
+            df = df.option('header', hasHeader and "true" or "false").option('delimiter', inputDelimiter)
+                    .option('inferSchema', "true")
     
+        df = df.load(filePath)
+        return df
+
     def __init__(self, 
             dataset: str,
             source : str,
@@ -76,11 +96,7 @@ class Chunker:
 
     
         #Probably generalize this more
-        df = spark.read.load(path)
-            .format(inputformat)
-            .option('header', hasHeader and "true" or "false")
-            .option('delimiter', inputDelimiter)
-            .option('inferSchema', "true")
+        df = _read(path)
 
         #get rid of unneeded columns
         df = df.select(*columns.keys())
@@ -134,9 +150,6 @@ class Chunker:
         self.df = self.df.withColumn(HASH_COLUMN_NAME, spark_sha1(spark_concat_ws("", *self.df.columns)))
 
 
-    def __fetchCanonDF(self):
-        pass
-
 
     def __fixColumnNamesForParquet(self):
         newCols = []
@@ -162,7 +175,9 @@ class Chunker:
         """ We run a 2-way subtract to get rows added and rows deleted. Changed rows are just rows simultaenously added to the new version
             and deleted from the old version.
         """
-        canon_df = self.__fetchCanonDF()
+        
+        #fetch current canon
+        canon_df = self._read(S3_CANON_PATH, inputFormat="parquet")
 
         additions = self.df.subtract(canon_df)
         deletions = canon_df.subtract(self.df)
