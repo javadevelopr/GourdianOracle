@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Tue Feb 25 13:40:33 2020
+# Last Modified: Tue Feb 25 17:44:08 2020
 #
 # Author: samolof
 #
@@ -46,15 +46,6 @@ DIFF_CODE_COLUMN_NAME="__GACTION_"
 SAVE_MODE="overwrite"
 
 from typing import Union, List, Dict, Optional, Callable
-
-
-
-
-def rotateCanon():
-    S3_CANON_PREFIX 
-    s3.move
-
-
 
 
 

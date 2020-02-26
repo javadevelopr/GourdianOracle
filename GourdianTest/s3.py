@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 16,2020
 #
-# Last Modified: Tue Feb 25 17:31:37 2020
+# Last Modified: Tue Feb 25 18:08:43 2020
 #
 # Author: samolof
 #
@@ -64,7 +64,15 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: Li
         
 
 
+def moveCanon(s3BucketName: str, s3canonPrefix: str, s3destPrefix: str):
+    s3 = S3Operator(s3bucketName)
+    
+    #use filename extension(date-time stamp) to get new foldername
+    fileName = s3.getObjNames(s3canonPrefix)[0] 
+    versionTimeStamp = fileName.split('.')[1]
 
+
+    s3.moveAllFilesInFolder(s3canonPrefix, s3destPrefix + '/' + versionTimeStamp)
 
 class S3Operator(object):
     
