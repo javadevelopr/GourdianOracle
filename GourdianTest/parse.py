@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 26,2020
 #
-# Last Modified: Thu Feb 27 07:37:31 2020
+# Last Modified: Thu Feb 27 15:46:09 2020
 #
 # Author: samolof
 #
@@ -16,12 +16,16 @@ import sys
 import logger
 from pyspark.sql import SparkSession
 from chunk import Chunker
+import functions
 
 parser = argparse.ArgumentParser()
-parser.add_argument('jsonFile', metavar='CONFIG_FILE',nargs='?', type=str, help='The Json Configuration File')
-parser.add_argument('sourcePath')
+parser.add_argument('jsonFile', metavar='CONFIG_FILE', type=str, help='Json Configuration File')
+parser.add_argument('--s3Root', metavar='S3_ROOT', type=str, help="The S3 Bucket containing all data sources.")
 
 # partition_function = getattr(functions, 'longlatpartitioner')
+
+
+
 
 SOURCE_PATHS = {
         'epa_aqs' : {
@@ -39,8 +43,22 @@ SOURCE_PATHS = {
 }
 
 
+LOG_FORMAT = '%[(asctime)s %(filename)s:%(lineno)s] %(message)s'
+
+
+def getUserFunctionFromName(functionName):
+    try:
+        return getattr(function, functionName)
+    except NameError:
+        return None
+
+
+
 if __name__=="__main__":
     spark = SparkSession.builder.appName('Gourdnet_Versioner').getOrCreate()
+    logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+
+
     args = parser.args()
     jsFile = args.jsonFile
 
@@ -58,16 +76,26 @@ if __name__=="__main__":
         columns = source['column']
         try:
             transformColumns = source['transformColumns']
-            transformFunctions = source['transformFunnction']
+            transformFunction = getUserFunctionFromName(source['transformFunction'])
     
         except KeyError as e:
-            transformColumns = transformFunctions = None
+            transformColumns = transformFunction = None
+
+
 
         layouts = source['layouts']
 
         for layout in layouts:
-            layoutName, keys, keyFunctions = parseLayout(layout)
+            layoutName, keys, keyFunctionNames = parseLayout(layout)
 
+            keyFunctions = {}
+            #replace function names in keyFunctions dict with actual functions if they exist
+            for k,v in keyFunctionNames:
+                keyFunctions[k] = getUserFunctionFromName(v)
+
+
+
+            #Where the meat is. Create chunker and partition
             chunker = Chunker(
                     dataset=dataset,
                     source = source,
