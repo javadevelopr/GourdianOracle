@@ -32,25 +32,34 @@
 			    "has_tornado_or_funnel_cloud"
 		    ]
                 },
-		"transform": ["FRSHTT"],
+		"transformColumns": ["FRSHTT"],
+		"transformFunction": "noaa_transform",
                 "layouts":[
                     {
                         "name":"approxlat_approxlng_yyyy_mm",
                         "keys":[
-                            "Latitude",
-                            "Longitude",
-                            "Date Local"
+                            "LATITUDE",
+                            "LONGITUDE",
+                            "DATE LOCAL"
                         ],
+			"keyFunctions":{
+				"LATITUDE": "latPartitioner",
+				"LONGITUDE" : "longPartitioner"
+			},
 			"sort_order" : "desc",
                         "max_chunk_length": "250000"
                     },
                     {
                         "name":"yyyy_mm_approxlat_approxlng",
                         "keys":[
-                            "Date Local",
-                            "Latitude",
-                            "Longitude"
+                            "DATE LOCAL",
+                            "LATITUDE",
+                            "LONGITUDE"
                         ],
+			"keyFunctions":{
+				"LATITUDE": "latPartitioner",
+				"LONGITUDE" : "longPartitioner"
+			},
 			"sort_order": "desc",
                         "max_chunk_length": "250000"
                     }

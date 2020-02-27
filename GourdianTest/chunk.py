@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Wed Feb 26 08:32:44 2020
+# Last Modified: Wed Feb 26 22:03:45 2020
 #
 # Author: samolof
 #
@@ -84,7 +84,7 @@ class Chunker:
             keyFunctions: Dict[str, callable] ={},
             sortAscending: bool = False, 
             transformColumns: List[str]  = [] ,
-            transformFunction: Optional[ Callable[[Dataframe, Dict[str,str] ], Dataframe] ] = None,
+            transformFunction: callable = None,
             inputformat: str = "csv",
             hasHeader: bool = True,
             inputDelimiter: str = ","
@@ -108,12 +108,11 @@ class Chunker:
         df = df.na.drop(subset=keyColumns)
 
         #change column names and apply transformations
-        non_transform_columns = [c for c in df.columns if c not in transformColumns]
-        for c in non_transform_columns:
+        for c in [col for col in df.columns if col not in transformColumns]:
             if type(columns[c]) == str :
                 df = df.withColumnRenamed(c, columns[c])
         if transformFunction:        
-            df = transformFunction(df, columns)
+            df = transformFunction(df, {k:columns[k] for k in transformColumns})
 
         #need to translate self.keyColumns to new column names
         self.keyColumns = list( map(lambda k: columns[k], keyColumns))
@@ -127,7 +126,7 @@ class Chunker:
             
         self.df = df
 
-        #add some internal columns for administration
+        #add some internal columns for spark administration
         self.__adRowHash()
         self.__createPartitionColumns()
 
@@ -155,17 +154,6 @@ class Chunker:
 
 
 
-    def __fixColumnNamesForParquet(self):
-        newCols = []
-        disallowed = ',;{}()='
-        for column in self.df.columns:
-            column = column.lower()
-            column = column.replace(' ', '_')
-            for c in disallowed:
-                column = column.replace(c,'')
-            
-            newCols.append(column)
-        self.df = self.df.toDF(*newCols)
 
     def partition(self):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
