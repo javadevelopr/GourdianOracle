@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 26,2020
 #
-# Last Modified: Thu Feb 27 07:24:15 2020
+# Last Modified: Thu Feb 27 07:37:31 2020
 #
 # Author: samolof
 #
@@ -15,6 +15,7 @@ import argparse
 import sys
 import logger
 from pyspark.sql import SparkSession
+from chunk import Chunker
 
 parser = argparse.ArgumentParser()
 parser.add_argument('jsonFile', metavar='CONFIG_FILE',nargs='?', type=str, help='The Json Configuration File')
@@ -53,7 +54,6 @@ if __name__=="__main__":
     sources =  json["dataset"]["sources"]
 
     for source in sources:
-        #table - source:[table1:key,keyFunction, table2]
         name = source['name']
         columns = source['column']
         try:
@@ -67,6 +67,20 @@ if __name__=="__main__":
 
         for layout in layouts:
             layoutName, keys, keyFunctions = parseLayout(layout)
+
+            chunker = Chunker(
+                    dataset=dataset,
+                    source = source,
+                    tableName = layoutName,
+                    path = SOURCE_PATHS[dataset][source],
+                    columns = columns,
+                    keyColumns = keys,
+                    keyFunctions = keyFunctions,
+                    transformColumns = transformColumns,
+                    transformFunction = transformFunction,
+            )
+
+            chunker.partition()
 
 
 
