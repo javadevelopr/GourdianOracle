@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Thu Feb 27 21:43:07 2020
+# Last Modified: Thu Feb 27 22:10:07 2020
 #
 # Author: samolof
 #
@@ -119,7 +119,7 @@ class Partitioner:
         """
         
         #fetch current canon
-        canon_df = self._read(S3_CANON_PATH, inputFormat="parquet")
+        canon_df = Loader.read(S3_CANON_PATH, inputFormat="parquet")
 
         additions = self.df.subtract(canon_df)
         deletions = canon_df.subtract(self.df)
@@ -170,8 +170,9 @@ class Partitioner:
 
 
 class Loader:
-
-    def _read(filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
+    
+    @staticmethod
+    def read(filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
         df = spark.read.format(inputFormat)
 
         if inputFormat == "csv":
@@ -200,7 +201,7 @@ class Loader:
         self.columns = columns
 
     
-        df = _read(path)
+        df = self.read(path)
 
         #get rid of unneeded columns
         df = df.select(*columns.keys())
