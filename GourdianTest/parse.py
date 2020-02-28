@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 26,2020
 #
-# Last Modified: Thu Feb 27 16:56:51 2020
+# Last Modified: Thu Feb 27 21:47:31 2020
 #
 # Author: samolof
 #
@@ -15,7 +15,7 @@ import argparse
 import sys
 import logging
 from pyspark.sql import SparkSession
-from chunk import Chunker
+from chunk import Loader, Partitioner
 import functions
 from typing import Dict, Union, List
 
@@ -109,6 +109,15 @@ if __name__=="__main__":
         except KeyError as e:
             transformColumns = transformFunction = None
 
+        #load the dataset
+        dfloader = Loader(
+                dataset=datasetName,
+                source = sourceName,
+                path = SOURCE_PATHS[dataset][source],
+                columns = columns,
+                transformColumns = transformColumns,
+                transformFunction = transformFunction,
+        )
 
 
         layouts = source['layouts']
@@ -125,21 +134,15 @@ if __name__=="__main__":
 
             
 
-
-            #Where the meat is. Create chunker and partition
-            chunker = Chunker(
-                    dataset=datasetName,
-                    source = sourceName,
-                    tableName = layoutName,
-                    path = SOURCE_PATHS[dataset][source],
-                    columns = columns,
-                    keyColumns = keys,
-                    keyFunctions = keyFunctions,
-                    transformColumns = transformColumns,
-                    transformFunction = transformFunction,
+            chunker = Partitioner(
+                        loader=dfloader, 
+                        tableName = layoutName,
+                        keyColumns = keys,
+                        keyFunctions = keyFunctions
             )
 
             chunker.partition()
+            
 
 
 
