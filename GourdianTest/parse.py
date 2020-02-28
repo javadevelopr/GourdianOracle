@@ -13,16 +13,15 @@
 import json
 import argparse
 import sys
-import logger
+import logging
 from pyspark.sql import SparkSession
 from chunk import Chunker
 import functions
+from typing import Dict, Union, List
 
 parser = argparse.ArgumentParser()
 parser.add_argument('jsonFile', metavar='CONFIG_FILE', type=str, help='Json Configuration File')
 parser.add_argument('--s3Root', metavar='S3_ROOT', type=str, help="The S3 Bucket containing all data sources.")
-
-# partition_function = getattr(functions, 'longlatpartitioner')
 
 
 
@@ -60,7 +59,7 @@ def getJsonFieldFromRef(ref: str, jsonField: List[any]) -> any:
     """
 
     fields = list(filter(lambda s: s['name'] == ref, jsonField))
-    return len(fields) > 0 and field[0] or None
+    return len(fields) > 0 and fields[0] or None
 
 
 
@@ -74,11 +73,10 @@ def recursiveParse(fieldName, jsonField: any):
     pass
 
 if __name__=="__main__":
-    spark = SparkSession.builder.appName('Gourdnet_Versioner').getOrCreate()
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 
 
-    args = parser.args()
+    args = parser.parse_args()
     jsFile = args.jsonFile
 
     chunkers = []; tables = {}
@@ -87,11 +85,13 @@ if __name__=="__main__":
         js = json.loads(j.read())
 
 
-    dataset = json["dataset"]["name"]
-    sources =  json["dataset"]["sources"]
+    datasetName = js["dataset"]["name"]
+    sources =  js["dataset"]["sources"]
+
+    spark = SparkSession.builder.appName('Gourdnet_Versioner').getOrCreate()
 
     for source in sources:
-        name = source['name']
+        sourceName = source['name']
 
         try:
             ref = source['ref']
@@ -101,7 +101,7 @@ if __name__=="__main__":
         except KeyError:
             pass
 
-        columns = source['column']
+        columns = source['columns']
         try:
             transformColumns = source['transformColumns']
             transformFunction = getUserFunctionFromName(source['transformFunction'])
@@ -114,19 +114,22 @@ if __name__=="__main__":
         layouts = source['layouts']
 
         for layout in layouts:
-            layoutName, keys, keyFunctionNames = parseLayout(layout)
-
+            layoutName = layout['name']
+            keys = layout['keys']
+            keyFunctionNames = layout['keyFunctions']
+    
             keyFunctions = {}
             #replace function names in keyFunctions dict with actual functions if they exist
-            for k,v in keyFunctionNames:
+            for k,v in keyFunctionNames.items():
                 keyFunctions[k] = getUserFunctionFromName(v)
 
+            
 
 
             #Where the meat is. Create chunker and partition
             chunker = Chunker(
-                    dataset=dataset,
-                    source = source,
+                    dataset=datasetName,
+                    source = sourceName,
                     tableName = layoutName,
                     path = SOURCE_PATHS[dataset][source],
                     columns = columns,
@@ -141,4 +144,4 @@ if __name__=="__main__":
 
 
 
-    spark.stop()
+    #spark.stop()

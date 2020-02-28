@@ -15,11 +15,11 @@ from pyspark.sql import SparkSession
 from pyspark.sql import dataframe as Dataframe
 from pyspark.sql.functions import round as spark_round, sha1 as spark_sha1
 from pyspark.sql.functions import concat_ws as spark_concat_ws, lit as spark_lit
-from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType, TimeStampType
+from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType
 from pyspark.accumulators import AccumulatorParam
 from functools import partial
 from enum import Enum
-from gourdian import gtypes
+#from gourdian import gtypes
 import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
@@ -68,8 +68,9 @@ class Chunker:
         df = spark.read.format(inputFormat)
 
         if inputFormat == "csv":
-            df = df.option('header', hasHeader and "true" or "false").option('delimiter', inputDelimiter)
-                    .option('inferSchema', "true")
+            df = df.option('header', hasHeader and "true" or "false") \
+                .option('delimiter', inputDelimiter)           \
+                .option('inferSchema', "true")
     
         df = df.load(filePath)
         return df
