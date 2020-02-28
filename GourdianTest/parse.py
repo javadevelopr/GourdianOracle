@@ -17,6 +17,7 @@ import logging
 from pyspark.sql import SparkSession
 from chunk import Loader, Partitioner
 import functions
+import configparser
 from typing import Dict, Union, List
 
 parser = argparse.ArgumentParser()
@@ -75,9 +76,13 @@ def recursiveParse(fieldName, jsonField: any):
 if __name__=="__main__":
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 
+    config = configparser.ConfigParser()
+    config.read('config.ini')
 
     args = parser.parse_args()
     jsFile = args.jsonFile
+
+    
 
     chunkers = []; tables = {}
     js = None
@@ -88,7 +93,13 @@ if __name__=="__main__":
     datasetName = js["dataset"]["name"]
     sources =  js["dataset"]["sources"]
 
-    spark = SparkSession.builder.appName('Gourdnet_Versioner').getOrCreate()
+    spark = SparkSession.builder.appName('Gourdnet_Versioner') \
+        .master(config['spark']['sparkMaster']) \
+        .config('spark.executor.memory', config['spark']['executorMemory']) \
+        .config('spark.executor.cores', config['spark']['executorCores']) \
+        .config('spark.driver.memory',config['spark']['driverMemory']) \
+        .config('spark.driver.cores',config['spark']['driverCores']) \
+        .getOrCreate()
 
     for source in sources:
         sourceName = source['name']

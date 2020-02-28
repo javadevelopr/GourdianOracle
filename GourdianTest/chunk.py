@@ -104,6 +104,28 @@ class Partitioner:
 
             self.partitionKeyColumns.append(colName)
 
+    def getFirstAndLastChunkRows(self):
+        first_and_last_rows_ac = sc.accumulator([], _ListParam())
+
+        def __f(it):
+            global first_and_last_rows_ac
+            first = last = None
+            try:
+                first = next(it)
+                *_, last = it
+
+            except StopIteration: pass
+            except ValueError:
+                last = first
+            first_and_last_rows_ac += [(first,last)]
+
+        self.df.rdd.foreachPartition(__f)
+
+        first_and_last_labels = list( map(lambda x: tuple([x[c] for c in self.keyColumns]), first_and_last_rows_ac.value))
+
+        return first_and_last_labels
+
+
 
     def partition(self):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
@@ -130,28 +152,6 @@ class Partitioner:
         #controversial
         self.df = additions.unionAll(deletions)
         self.partition()
-
-    def getFirstAndLastChunkRows(self):
-        first_and_last_rows_ac = sc.accumulator([], _ListParam())
-
-        def __f(it):
-            global first_and_last_rows_ac
-            first = last = None
-            try:
-                first = next(it)
-                *_, last = it
-
-            except StopIteration: pass
-            except ValueError:
-                last = first
-            first_and_last_rows_ac += [(first,last)]
-
-        self.df.rdd.foreachPartition(__f)
-
-        first_and_last_labels = list( map(lambda x: tuple([x[c] for c in self.keyColumns]), first_and_last_rows_ac.value))
-
-        return first_and_last_labels
-
 
     def writeParquetPartitions(self):
         if not self.isPartitioned:
