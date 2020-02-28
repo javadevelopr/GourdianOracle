@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 26,2020
 #
-# Last Modified: Thu Feb 27 15:46:09 2020
+# Last Modified: Thu Feb 27 16:56:51 2020
 #
 # Author: samolof
 #
@@ -52,7 +52,26 @@ def getUserFunctionFromName(functionName):
     except NameError:
         return None
 
+def getJsonFieldFromRef(ref: str, jsonField: List[any]) -> any:
+    """ A quirky way to handle repeated fields in json to keep the json file small. 
+    For a key that repeats fields and values from another key we reference that key and
+    parse it for the correct values.
+    jsonField should be a list. The ref references another item in a list of fields
+    """
 
+    fields = list(filter(lambda s: s['name'] == ref, jsonField))
+    return len(fields) > 0 and field[0] or None
+
+
+
+def recursiveParse(fieldName, jsonField: any):
+    #fieldName = so2_daily_summary
+    #try:
+     #   if jsonField["ref"]     
+
+    #except KeyError:
+    #    continue
+    pass
 
 if __name__=="__main__":
     spark = SparkSession.builder.appName('Gourdnet_Versioner').getOrCreate()
@@ -73,6 +92,15 @@ if __name__=="__main__":
 
     for source in sources:
         name = source['name']
+
+        try:
+            ref = source['ref']
+            if ref and len(ref) > 0:
+                source = getJsonFieldFromRef(ref,sources)
+
+        except KeyError:
+            pass
+
         columns = source['column']
         try:
             transformColumns = source['transformColumns']

@@ -66,15 +66,15 @@
             },
 	    {
                 "name": "so2_daily_summary", 
-		"ref": "epa_aqs.ozone_daily_summary"
+		"ref": "ozone_daily_summary"
 	    },	
 	    {
                 "name": "co_daily_summary", 
-		"ref": "epa_aqs.ozone_daily_summary"
+		"ref": "ozone_daily_summary"
 	    },	
 	    {
                 "name": "no2_daily_summary", 
-		"ref": "epa_aqs.ozone_daily_summary"
+		"ref": "ozone_daily_summary"
 	    }	
 
         ]
