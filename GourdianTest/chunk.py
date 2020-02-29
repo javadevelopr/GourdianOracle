@@ -23,7 +23,6 @@ from enum import Enum
 import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
-from config import *
 from typing import Union, List, Dict, Optional, Callable
 
 PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
@@ -157,11 +156,12 @@ class Partitioner:
         if not self.isPartitioned:
             self.partition()
 
-        destinationPath = "s3a://" + AWS_CHUNK_STORE_BUCKET + "/" + AWS_TMP_CHUNK_STORE_PATH
+        destinationPath =  AWS_CHUNK_STORE_PATH + "/TMP"  
+    
         writer = self.df.write.partitionBy(*self.partitionKeyColumns)
         writer.parquet(destinationPath, mode="overwrite")
 
-        moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, AWS_CHUNK_STORE_BUCKET, AWS_TMP_CHUNK_STORE_PATH)
+        moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, AWS_CHUNK_STORE, "TMP")
 
 
     def writeCSVPartitions(self):

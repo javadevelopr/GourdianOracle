@@ -21,26 +21,8 @@ import configparser
 from typing import Dict, Union, List
 
 parser = argparse.ArgumentParser()
-parser.add_argument('jsonFile', metavar='CONFIG_FILE', type=str, help='Json Configuration File')
+parser.add_argument('dataset', metavar='DATASET_NAME', type=str, help='Name of the Dataset to process e.g epa_aqs (see config.ini)')
 parser.add_argument('--s3Root', metavar='S3_ROOT', type=str, help="The S3 Bucket containing all data sources.")
-
-
-
-
-SOURCE_PATHS = {
-        'epa_aqs' : {
-            'ozone_daily_summary' : "s3a://insight-gourdian-epaaqs-ozone-m/",
-            'so2_daily_summary' : "s3a://insight-gourdian-epaaqs-so2/",
-            'co_daily_summary' : "s3a://insight-gourdian-epaaqs-co/",
-            'no2_daily_summary': "s3a://insight-gourdian-epaaqs-no2/"
-            },
-        'noaa': {
-            "global_summary_of_day" : "s3a://insight-gourdian-noaa-global-summary-of-day-joined/"
-        },
-        'usgs_comcat' : {
-            "summary": "s3a://insight-gourdian-sources/usgs_comcat/"
-        }
-}
 
 
 LOG_FORMAT = '%[(asctime)s %(filename)s:%(lineno)s] %(message)s'
@@ -65,12 +47,7 @@ def getJsonFieldFromRef(ref: str, jsonField: List[any]) -> any:
 
 
 def recursiveParse(fieldName, jsonField: any):
-    #fieldName = so2_daily_summary
-    #try:
-     #   if jsonField["ref"]     
-
     #except KeyError:
-    #    continue
     pass
 
 if __name__=="__main__":
@@ -80,17 +57,31 @@ if __name__=="__main__":
     config.read('config.ini')
 
     args = parser.parse_args()
-    jsFile = args.jsonFile
+    datasetName = args.dataset
+
+
+    #set some global configuration values
+    AWS_CHUNK_STORE = config['ChunkStore']
+    AWS_CHUNK_STORE_PATH = f"s3a://{AWS_CHUNK_STORE}"
+    AWS_DIFF_STORE = config['DiffStore']
+    AWS_DIFF_STORE_PATH = f"s3a://{AWS_DIFF_STORE}"
+    AWS_CANON_STORE_PREFIX = config['CanonStorePrefix']
+
+
+    #check that we have the json manifest for that dataset
+    #and a config entry (with the source paths for that dataset)
+    assert datasetName in config['json'].keys() and datasetName in config.sections()
+
+    jsFile =  config['json'][datasetName]
 
     
 
     chunkers = []; tables = {}
-    js = None
     with open(jsFile, 'r') as j:
         js = json.loads(j.read())
 
 
-    datasetName = js["dataset"]["name"]
+    #assert datasetName = js["dataset"]["name"]
     sources =  js["dataset"]["sources"]
 
     spark = SparkSession.builder.appName('Gourdnet_Versioner') \
@@ -103,6 +94,10 @@ if __name__=="__main__":
 
     for source in sources:
         sourceName = source['name']
+
+        #check that a source path exists in config file for this source
+        assert sourceName in config[datasetName]
+
 
         try:
             ref = source['ref']
@@ -120,16 +115,17 @@ if __name__=="__main__":
         except KeyError as e:
             transformColumns = transformFunction = None
 
+        """
         #load the dataset
         dfloader = Loader(
                 dataset=datasetName,
                 source = sourceName,
-                path = SOURCE_PATHS[dataset][source],
+                path = config[datasetName][sourceName],
                 columns = columns,
                 transformColumns = transformColumns,
                 transformFunction = transformFunction,
         )
-
+        """
 
         layouts = source['layouts']
 
@@ -144,7 +140,7 @@ if __name__=="__main__":
                 keyFunctions[k] = getUserFunctionFromName(v)
 
             
-
+            """
             chunker = Partitioner(
                         loader=dfloader, 
                         tableName = layoutName,
@@ -153,9 +149,9 @@ if __name__=="__main__":
             )
 
             chunker.partition()
-            
+            """
 
 
 
 
-    #spark.stop()
+    spark.stop()
