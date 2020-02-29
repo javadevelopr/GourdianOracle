@@ -64,15 +64,15 @@ if __name__=="__main__":
 
 
     #set some global configuration values
-    AWS_CHUNK_STORE = config['aws']['ChunkStore']
-    AWS_CHUNK_STORE_PATH = f"s3a://{AWS_CHUNK_STORE}"
-    AWS_DIFF_STORE = config['aws']['DiffStore']
-    AWS_DIFF_STORE_PATH = f"s3a://{AWS_DIFF_STORE}"
-    AWS_CANON_STORE_PREFIX = config['aws']['CanonStorePrefix']
-    AWS_CANON_STORE_PATH= f"{AWS_CHUNK_STORE_PATH}/{AWS_CANON_STORE_PREFIX}"
+    aws_chunk_store = config['aws']['ChunkStore']
+    aws_chunk_store_path = f"s3a://{aws_chunk_store}"
+    aws_diff_store = config['aws']['DiffStore']
+    aws_diff_store_path = f"s3a://{aws_diff_store}"
+    aws_canon_store_prefix = config['aws']['CanonStorePrefix']
+    aws_canon_store_path= f"{aws_chunk_store_path}/{aws_canon_store_prefix}"
 
 
-    logging.info("Loaded Configs") ###
+    logging.info("Loaded Configs") 
 
     #check that we have the json manifest for that dataset
     #and a config entry (with the source paths for that dataset)
@@ -98,6 +98,8 @@ if __name__=="__main__":
         .config('spark.driver.cores',config['spark']['driverCores']) \
         .getOrCreate()
 
+    spark.sparkContext.setLogLevel("OFF") #controversial
+
     for source in sources:
         sourceName = source['name']
 
@@ -119,7 +121,8 @@ if __name__=="__main__":
             transformFunction = getUserFunctionFromName(source['transformFunction'])
     
         except KeyError as e:
-            transformColumns = transformFunction = None
+            transformColumns = []
+            transformFunction = None
 
         #load the dataset
         dfloader = Loader(
@@ -145,22 +148,21 @@ if __name__=="__main__":
                 keyFunctions[k] = getUserFunctionFromName(v)
 
 
-            print(f"{datasetName}.{sourceName}.{layoutName}  PATH{config[datasetName][sourceName]}")
-            print(transformFunction)
-            print(transformColumns)
 
-
-            """
             chunker = Partitioner(
                         loader=dfloader, 
                         tableName = layoutName,
                         keyColumns = keys,
-                        keyFunctions = keyFunctions
+                        keyFunctions = keyFunctions,
+                        chunkStorePath = aws_chunk_store_path,
+                        diffStorePath = aws_diff_store_path,
+                        canonStorePath = aws_canon_store_path
             )
 
-            chunker.partition()
-            """
+            #chunker.partition()
+            chunker.writeParquetPartitions()
 
+            break ########
 
 
 

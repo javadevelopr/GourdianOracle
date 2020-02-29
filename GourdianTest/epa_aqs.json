@@ -40,8 +40,8 @@
                             "Date Local"
                         ],
 			"keyFunctions":{
-				"latitude": "latPartitioner",
-				"longitude" : "longPartitioner"
+				"Latitude": "latPartitioner",
+				"Longitude" : "longPartitioner"
 			},
 			"sort_order" : "desc",
                         "max_chunk_length": "250000"
@@ -54,8 +54,8 @@
                             "Longitude"
                         ],
 			"keyFunctions":{
-				"latitude": "latPartitioner",
-				"longitude" : "longPartitioner"
+				"Latitude": "latPartitioner",
+				"Longitude" : "longPartitioner"
 			},
 			"sort_order" : "desc",
                         "max_chunk_length": "250000"

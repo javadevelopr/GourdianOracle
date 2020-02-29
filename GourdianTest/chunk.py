@@ -19,6 +19,7 @@ from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, 
 from pyspark.accumulators import AccumulatorParam
 from functools import partial
 from enum import Enum
+import os
 #from gourdian import gtypes
 import logging
 from s3 import moveAndTagS3Chunks
@@ -96,16 +97,15 @@ class Loader(object):
         self.path = path
         self.columns = columns
 
-        logging.info("ABOUT TO READ DATASET") ###### 
+        logging.info(f"Loading {self.path}...............") 
         df = self.read(spark, path)
 
-        logging.info(f"FINISHED READ DATASET: {df.count()}") ###### 
+        logging.info(f"Loaded {df.count()} rows of data.") 
 
         #get rid of unneeded columns
         df = df.select(*columns.keys())
-        
-
-        logging.info(df.columns) ######
+       
+        transformColumns = transformColumns or []
 
         #change column names and apply transformations
         for c in [col for col in df.columns if col not in transformColumns]:
@@ -118,7 +118,8 @@ class Loader(object):
         self.df = df
 
         #add some internal columns for spark administration
-        self.__adRowHash()
+        self.__addRowHash()
+        logging.info(f"Loader Initialized")
 
 
     def __addRowHash(self):
@@ -134,21 +135,31 @@ class Partitioner(object):
             self, 
             loader: Loader, 
             tableName: str,
+            chunkStorePath: str,
+            diffStorePath: str,
+            canonStorePath: str,
             keyColumns: List[str],
             keyFunctions: Dict[str, callable] ={},
             sortAscending : bool = False
 
             ):
+
         self.sortAscending = sortAscending
         self.loader = loader
         
+        self.chunkStorePath = chunkStorePath
+        self.chunkStore = os.path.basename(chunkStorePath)
+        self.diffStorePath = diffStorePath
+        self.diffStore = os.path.basename(diffStorePath)
+        self.canonStorePath = canonStorePath
+
         #need to translate keyColumns to new column names
         self.keyColumns = list( map(lambda k: loader.columns[k], keyColumns))
         self.partitionKeyColumns = []
 
         #similarly for keyFunctions
         self.keyFunctions = {}
-        for k,v in keyFunctions:
+        for k,v in keyFunctions.items():
             self.keyFunctions[loader.columns[k]] = keyFunctions[k]
 
         #Get loaded dataframe and drop null for key columns
@@ -164,7 +175,7 @@ class Partitioner(object):
             kf = self.keyFunctions.get(column)
             
             if kf:
-                kf = self.spark.udf.register(column + "_udf", kf)
+                kf = self.loader.spark.udf.register(column + "_udf", kf)
                 self.df = self.df.withColumn(colName, kf(self.df[column]))
             else:
                 self.df = self.df.withColumn(colName, self.df[column])
@@ -195,9 +206,11 @@ class Partitioner(object):
 
 
     def partition(self):
+        logging.info("Partitioning data...")
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
         self.isPartitioned = True
 
+        logging.info("Finished partitioning")
         #get first and last label
         #write manifest
 
@@ -208,7 +221,7 @@ class Partitioner(object):
         """
         
         #fetch current canon
-        canon_df = self.loader.read(self.loader.spark, AWS_CANON_STORE_PATH, inputFormat="parquet")
+        canon_df = self.loader.read(self.loader.spark, self.canonStorePath, inputFormat="parquet")
 
         additions = self.df.subtract(canon_df)
         deletions = canon_df.subtract(self.df)
@@ -221,15 +234,17 @@ class Partitioner(object):
         self.partition()
 
     def writeParquetPartitions(self):
+        logging.info("Writing Parquet partitions...")
         if not self.isPartitioned:
             self.partition()
 
-        destinationPath =  AWS_CHUNK_STORE_PATH + "/TMP"  
+        destinationPath =  self.chunkStorePath + "/TMP"  
     
         writer = self.df.write.partitionBy(*self.partitionKeyColumns)
         writer.parquet(destinationPath, mode="overwrite")
 
-        moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, AWS_CHUNK_STORE, "TMP")
+        moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, self.chunkStore, "TMP")
+
 
 
     def writeCSVPartitions(self):
