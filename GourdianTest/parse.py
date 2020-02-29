@@ -15,7 +15,9 @@ import argparse
 import sys
 import logging
 from pyspark.sql import SparkSession
-from chunk import Loader, Partitioner
+#import chunk
+from chunk import Loader as Loader
+from chunk import Partitioner
 import functions
 import configparser
 from typing import Dict, Union, List
@@ -25,12 +27,12 @@ parser.add_argument('dataset', metavar='DATASET_NAME', type=str, help='Name of t
 parser.add_argument('--s3Root', metavar='S3_ROOT', type=str, help="The S3 Bucket containing all data sources.")
 
 
-LOG_FORMAT = '%[(asctime)s %(filename)s:%(lineno)s] %(message)s'
+LOG_FORMAT = '[%(asctime)s %(filename)s:%(lineno)s] %(message)s'
 
 
 def getUserFunctionFromName(functionName):
     try:
-        return getattr(function, functionName)
+        return getattr(functions, functionName)
     except NameError:
         return None
 
@@ -50,6 +52,7 @@ def recursiveParse(fieldName, jsonField: any):
     #except KeyError:
     pass
 
+
 if __name__=="__main__":
     logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 
@@ -61,12 +64,15 @@ if __name__=="__main__":
 
 
     #set some global configuration values
-    AWS_CHUNK_STORE = config['ChunkStore']
+    AWS_CHUNK_STORE = config['aws']['ChunkStore']
     AWS_CHUNK_STORE_PATH = f"s3a://{AWS_CHUNK_STORE}"
-    AWS_DIFF_STORE = config['DiffStore']
+    AWS_DIFF_STORE = config['aws']['DiffStore']
     AWS_DIFF_STORE_PATH = f"s3a://{AWS_DIFF_STORE}"
-    AWS_CANON_STORE_PREFIX = config['CanonStorePrefix']
+    AWS_CANON_STORE_PREFIX = config['aws']['CanonStorePrefix']
+    AWS_CANON_STORE_PATH= f"{AWS_CHUNK_STORE_PATH}/{AWS_CANON_STORE_PREFIX}"
 
+
+    logging.info("Loaded Configs") ###
 
     #check that we have the json manifest for that dataset
     #and a config entry (with the source paths for that dataset)
@@ -115,9 +121,9 @@ if __name__=="__main__":
         except KeyError as e:
             transformColumns = transformFunction = None
 
-        """
         #load the dataset
         dfloader = Loader(
+                spark=spark,
                 dataset=datasetName,
                 source = sourceName,
                 path = config[datasetName][sourceName],
@@ -125,7 +131,6 @@ if __name__=="__main__":
                 transformColumns = transformColumns,
                 transformFunction = transformFunction,
         )
-        """
 
         layouts = source['layouts']
 
@@ -139,7 +144,12 @@ if __name__=="__main__":
             for k,v in keyFunctionNames.items():
                 keyFunctions[k] = getUserFunctionFromName(v)
 
-            
+
+            print(f"{datasetName}.{sourceName}.{layoutName}  PATH{config[datasetName][sourceName]}")
+            print(transformFunction)
+            print(transformColumns)
+
+
             """
             chunker = Partitioner(
                         loader=dfloader, 

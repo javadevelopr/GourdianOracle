@@ -25,6 +25,9 @@ from s3 import moveAndTagS3Chunks
 from tagger import tag
 from typing import Union, List, Dict, Optional, Callable
 
+
+
+
 PARTITION_COLUMN_NAME_PREFIX="_0e02_c39fb0d2a21963b_"
 HASH_COLUMN_NAME="__GSHA1_KEY_"
 DIFF_CODE_COLUMN_NAME="__GACTION_"
@@ -60,19 +63,84 @@ def cleanColumnNamesForParquet(df: Dataframe) -> Dataframe:
     return df
 
 
-class Partitioner:
+
+class Loader(object):
+    
+    def read(self, spark: SparkSession, filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
+        df = spark.read.format(inputFormat)
+
+        if inputFormat == "csv":
+            df = df.option('header', hasHeader and "true" or "false") \
+                .option('delimiter', inputDelimiter)           \
+                .option('inferSchema', "true")
+    
+        df = df.load(filePath)
+        return df
+
+    def __init__(self, 
+            spark: SparkSession,
+            dataset: str,
+            source : str,
+            path: str,
+            columns: Dict[str,str],
+            transformColumns: List[str]  = [] ,
+            transformFunction: callable = None,
+            inputformat: str = "csv",
+            hasHeader: bool = True,
+            inputDelimiter: str = ","
+        ):
+    
+        self.spark = spark
+        self.dataset = dataset
+        self.source = source
+        self.path = path
+        self.columns = columns
+
+        logging.info("ABOUT TO READ DATASET") ###### 
+        df = self.read(spark, path)
+
+        logging.info(f"FINISHED READ DATASET: {df.count()}") ###### 
+
+        #get rid of unneeded columns
+        df = df.select(*columns.keys())
+        
+
+        logging.info(df.columns) ######
+
+        #change column names and apply transformations
+        for c in [col for col in df.columns if col not in transformColumns]:
+            if type(columns[c]) == str :
+                df = df.withColumnRenamed(c, columns[c])
+        if transformFunction:        
+            df = transformFunction(df, {k:columns[k] for k in transformColumns})
+
+            
+        self.df = df
+
+        #add some internal columns for spark administration
+        self.__adRowHash()
+
+
+    def __addRowHash(self):
+        """Add a column for hash of the row as a superkey"""
+        self.df = self.df.withColumn(HASH_COLUMN_NAME, spark_sha1(spark_concat_ws("", *self.df.columns)))
+
+
+
+
+class Partitioner(object):
 
     def __init__(
             self, 
-            loader:Loader, 
+            loader: Loader, 
             tableName: str,
             keyColumns: List[str],
             keyFunctions: Dict[str, callable] ={},
             sortAscending : bool = False
 
             ):
-        pass
         self.sortAscending = sortAscending
+        self.loader = loader
         
         #need to translate keyColumns to new column names
         self.keyColumns = list( map(lambda k: loader.columns[k], keyColumns))
@@ -96,7 +164,7 @@ class Partitioner:
             kf = self.keyFunctions.get(column)
             
             if kf:
-                kf = spark.udf.register(column + "_udf", kf)
+                kf = self.spark.udf.register(column + "_udf", kf)
                 self.df = self.df.withColumn(colName, kf(self.df[column]))
             else:
                 self.df = self.df.withColumn(colName, self.df[column])
@@ -140,7 +208,7 @@ class Partitioner:
         """
         
         #fetch current canon
-        canon_df = Loader.read(S3_CANON_PATH, inputFormat="parquet")
+        canon_df = self.loader.read(self.loader.spark, AWS_CANON_STORE_PATH, inputFormat="parquet")
 
         additions = self.df.subtract(canon_df)
         deletions = canon_df.subtract(self.df)
@@ -166,65 +234,5 @@ class Partitioner:
 
     def writeCSVPartitions(self):
         pass
-
-
-
-class Loader:
-    
-    @staticmethod
-    def read(filePath: str, inputFormat: str ="csv", hasHeader: bool= True, inputDelimiter: str=",") -> Dataframe:
-        df = spark.read.format(inputFormat)
-
-        if inputFormat == "csv":
-            df = df.option('header', hasHeader and "true" or "false") \
-                .option('delimiter', inputDelimiter)           \
-                .option('inferSchema', "true")
-    
-        df = df.load(filePath)
-        return df
-
-    def __init__(self, 
-            dataset: str,
-            source : str,
-            path: str,
-            columns: Dict[str,str],
-            transformColumns: List[str]  = [] ,
-            transformFunction: callable = None,
-            inputformat: str = "csv",
-            hasHeader: bool = True,
-            inputDelimiter: str = ","
-        ):
-
-        self.dataset = dataset
-        self.source = source
-        self.path = path
-        self.columns = columns
-
-    
-        df = self.read(path)
-
-        #get rid of unneeded columns
-        df = df.select(*columns.keys())
-            
-
-        #change column names and apply transformations
-        for c in [col for col in df.columns if col not in transformColumns]:
-            if type(columns[c]) == str :
-                df = df.withColumnRenamed(c, columns[c])
-        if transformFunction:        
-            df = transformFunction(df, {k:columns[k] for k in transformColumns})
-
-            
-        self.df = df
-
-        #add some internal columns for spark administration
-        self.__adRowHash()
-
-
-    def __addRowHash(self):
-        """Add a column for hash of the row as a superkey"""
-        self.df = self.df.withColumn(HASH_COLUMN_NAME, spark_sha1(spark_concat_ws("", *self.df.columns)))
-
-
 
 
