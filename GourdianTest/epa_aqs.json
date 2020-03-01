@@ -6,7 +6,7 @@
                 "name": "ozone_daily_summary", 
                 "columns": {
                     "Date Local": "date",
-                    "Latitude": "latitiude",
+                    "Latitude": "latitude",
                     "Longitude": "longitude",
                     "Datum": "datum",
                     "AQI": "aqi",

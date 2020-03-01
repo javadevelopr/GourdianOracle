@@ -17,6 +17,7 @@ from pyspark.sql.functions import round as spark_round, sha1 as spark_sha1
 from pyspark.sql.functions import concat_ws as spark_concat_ws, lit as spark_lit
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType
 from pyspark.accumulators import AccumulatorParam
+from pyspark.storagelevel import StorageLevel
 from functools import partial
 from enum import Enum
 import os
@@ -97,7 +98,7 @@ class Loader(object):
         self.path = path
         self.columns = columns
 
-        logging.info(f"Loading {self.path}...............") 
+        logging.info(f"Loading {self.path}") 
         df = self.read(spark, path)
 
         logging.info(f"Loaded {df.count()} rows of data.") 
@@ -116,6 +117,7 @@ class Loader(object):
 
             
         self.df = df
+        self.df.persist(StorageLevel.MEMORY_AND_DISK)  ## 
 
         #add some internal columns for spark administration
         self.__addRowHash()
@@ -146,7 +148,7 @@ class Partitioner(object):
 
         self.sortAscending = sortAscending
         self.loader = loader
-        
+        self.tableName = tableName 
         self.chunkStorePath = chunkStorePath
         self.chunkStore = os.path.basename(chunkStorePath)
         self.diffStorePath = diffStorePath
@@ -210,7 +212,10 @@ class Partitioner(object):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
         self.isPartitioned = True
 
-        logging.info("Finished partitioning")
+        #force repartitioning
+        #self.df.count()
+        logging.info("Finished partitioning.")
+
         #get first and last label
         #write manifest
 
@@ -238,13 +243,19 @@ class Partitioner(object):
         if not self.isPartitioned:
             self.partition()
 
-        destinationPath =  self.chunkStorePath + "/TMP"  
+        destinationPath =  self.chunkStorePath + "/TMP1"  
     
-        writer = self.df.write.partitionBy(*self.partitionKeyColumns)
+        writer = self.df.write       #.partitionBy(*self.partitionKeyColumns)
         writer.parquet(destinationPath, mode="overwrite")
 
-        moveAndTagS3Chunks(self.dataset, self.source, self.tableName, self.keyColumns, self.chunkStore, "TMP")
+        logging.info("Tagging partitions.")
+        #moveAndTagS3Chunks(self.loader.dataset, self.loader.source, self.tableName, self.keyColumns, self.chunkStore, "TMP1")
+        logging.info(f"Partitions, tagged and written to {self.chunkStorePath}")
 
+
+#have to rewrite moveAndTag
+#have to check partitioning
+#HAVE TO REMOVE Partitioning Columns
 
 
     def writeCSVPartitions(self):
