@@ -18,6 +18,7 @@ from pyspark.sql.functions import concat_ws as spark_concat_ws, lit as spark_lit
 from pyspark.sql.types import StructField, DoubleType, StructType, IntegerType, StringType
 from pyspark.accumulators import AccumulatorParam
 from pyspark.storagelevel import StorageLevel
+from pyspark import TaskContext
 from functools import partial
 from enum import Enum
 import os
@@ -190,6 +191,7 @@ class Partitioner(object):
         def __f(it):
             global first_and_last_rows_ac
             first = last = None
+            ctx = TaskContext()
             try:
                 first = next(it)
                 *_, last = it
@@ -197,7 +199,7 @@ class Partitioner(object):
             except StopIteration: pass
             except ValueError:
                 last = first
-            first_and_last_rows_ac += [(first,last)]
+            first_and_last_rows_ac += [(ctx.partitionId(),first,last)]
 
         self.df.rdd.foreachPartition(__f)
 
@@ -205,6 +207,11 @@ class Partitioner(object):
 
         return first_and_last_labels
 
+    def writeManifest(self):
+        if not self.isPartitioned:
+            logging.error("Dataframe has not been re-partitioned")
+            return
+        labels = self.getFirstAndLastChunkRows()
 
 
     def partition(self):
@@ -237,6 +244,10 @@ class Partitioner(object):
         #controversial
         self.df = additions.unionAll(deletions)
         self.partition()
+    
+
+
+
 
     def writeParquetPartitions(self):
         logging.info("Writing Parquet partitions...")
@@ -248,9 +259,9 @@ class Partitioner(object):
         writer = self.df.write       #.partitionBy(*self.partitionKeyColumns)
         writer.parquet(destinationPath, mode="overwrite")
 
-        logging.info("Tagging partitions.")
+        #logging.info("Tagging partitions.")
         #moveAndTagS3Chunks(self.loader.dataset, self.loader.source, self.tableName, self.keyColumns, self.chunkStore, "TMP1")
-        logging.info(f"Partitions, tagged and written to {self.chunkStorePath}")
+        #logging.info(f"Partitions, tagged and written to {self.chunkStorePath}")
 
 
 #have to rewrite moveAndTag
