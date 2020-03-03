@@ -159,18 +159,33 @@ if __name__=="__main__":
                         canonStorePath = aws_canon_store_path
             )
 
-            #chunker.partition()
             chunker.writeParquetPartitions()
+            chunkLabels = chunker.getPartitionLabels()
 
-            chunkLabels = chunker.getFirstAndLastRowLabels()
-
-            moveAndTagChunkFiles(dataset, ..., chunkLabels)################
-                    #for f in fileNames:
-                        part= int(f.split('-')[1]) 
-                        first_and_last = chunkLabels[part]
-                        tag = getTag(first_and_last)
+            #tagChunkFiles(dataset, ..., chunkLabels)################
+            
             break ########
 
 
 
     spark.stop()
+
+
+def tagChunkFiles(
+        datasetName: str, 
+        sourceName: str, 
+        tableName: str,
+        chunkLabels: Dict[int, Tuple[int, list, list] ]
+        keyColumns: List[str],
+        s3BucketName: str,
+        s3BucketPrefix: str,
+        delete: bool = False
+):
+
+    s3 = S3Operator(s3BucketName)
+    chunkFiles = s3.getObjNames(s3BucketPrefix)
+    for cf  in chunkFiles:
+        cf = os.path.basename(cf)
+        partitionId = int(cf.split('-')[1])
+        num_rows, first_row, last_row  = chunkLabels[partitionId]
+            

@@ -23,19 +23,6 @@ from typing import Union, List, Dict, Optional, Callable
 
 _sanitizeFN = lambda f: f.endswith('/') and f.rstrip('/') or f
 
-def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: List[str], s3bucketName: str, s3bucketPrefix: str, delete:bool = False):
-    """ 
-    Spark doesn't seem to allow us to control output folder structure and filenames so we have to manually rename (tag) and 
-    move the output files produced by it. 
-    Chunks are stored as flat files at the top level of the AWS bucket.
-    """
-
-
-    s3 = S3Operator(s3bucketName)
-    files = s3.getObjNames(s3bucketPrefix)
-
-        logging.info(f"Moved {f} to {s3bucketName}/{fileTag}")
-        
 
 
 def moveCanon(s3BucketName: str, s3canonPrefix: str, s3destPrefix: str):

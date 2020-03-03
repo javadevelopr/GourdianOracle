@@ -26,7 +26,7 @@ import os
 import logging
 from s3 import moveAndTagS3Chunks
 from tagger import tag
-from typing import Union, List, Dict, Optional, Callable
+from typing import Union, List, Dict, Optional, Callable, Tuple
 
 
 
@@ -184,7 +184,7 @@ class Partitioner(object):
                 self.df = self.df.withColumn(colName, self.df[column])
 
             self.partitionKeyColumns.append(colName)
-
+    """
     def getFirstAndLastChunkRows(self):
         first_and_last_rows_ac = sc.accumulator([], _ListParam())
 
@@ -206,9 +206,17 @@ class Partitioner(object):
         first_and_last_labels = list( map(lambda x: tuple([x[c] for c in self.keyColumns]), first_and_last_rows_ac.value))
 
         return first_and_last_labels
+    """
 
+    def getPartitionLabels(self) -> Dict[int: Tuple[int, List[int],List[int]] ]:
+        """ Returns the partitionId, total number of rows, first row, and last row  
+            for each partition as a dict with partitionId as key:
 
-    def getFirstAndLastChunkRows(self) -> Dict[int:]:
+            {partitionId: (count, first_row, last_row)} 
+        """
+        if not self.isPartitioned:
+            self.partition()
+
         def __f(idx, it):
             first = last = none
             num_rows = 0
@@ -218,16 +226,18 @@ class Partitioner(object):
                 last = i
             num_rows = (first and num_rows + 1) or num_rows
             return (idx, num_rows, first, last)
+        
+        def __getKeyCols(spark_row):
+            return list(lambda sr: [ sr[c] for c  in self.keyColumns], spark_row)
+
 
         firstAndLast = self.df.rdd.mapPartitionsWithIndex(__f).collect()
-        
-        firstAndLast =  filter( lambda f: 
 
-    def writeManifest(self):
-        if not self.isPartitioned:
-            logging.error("Dataframe has not been re-partitioned")
-            return
-        labels = self.getFirstAndLastChunkRows()
+        firstAndLastf = filter( lambda f: type(f) == tuple, firstAndLast)
+        chunkLabel  = { r[0] : (r[1], __getKeyCols(r[2]), __getKeyCols(r[3])) for r in firstAndLastf }
+        
+        return chunkLabel
+
 
 
     def partition(self):
