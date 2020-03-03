@@ -162,6 +162,13 @@ if __name__=="__main__":
             #chunker.partition()
             chunker.writeParquetPartitions()
 
+            chunkLabels = chunker.getFirstAndLastRowLabels()
+
+            moveAndTagChunkFiles(dataset, ..., chunkLabels)################
+                    #for f in fileNames:
+                        part= int(f.split('-')[1]) 
+                        first_and_last = chunkLabels[part]
+                        tag = getTag(first_and_last)
             break ########
 
 

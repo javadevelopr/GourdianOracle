@@ -31,34 +31,8 @@ def moveAndTagS3Chunks(dataset: str, source: str, tableName: str, keyColumns: Li
     """
 
 
-    def _getKeyValuesFromDirName(dirname):
-        res = []
-        keys = dirname.split('/')[1:]
-        
-
-        for k in keys: 
-            res.append(k.split('=')[1])
-        return res
-
-
     s3 = S3Operator(s3bucketName)
-
     files = s3.getObjNames(s3bucketPrefix)
-
-    for f in files:
-
-        #Get the key value from Spark output folder name
-        dirname = os.path.dirname(f).replace(s3bucketPrefix,'')
-
-        keyValues = _getKeyValuesFromDirName(dirname)
-
-        fileTag = tag(dataset = dataset, source = source, tableName = tableName, keyColumns = keyColumns, keyValues = keyValues)
-
-        #move file to top-level of bucket with fileTag as new filename
-        if delete:
-            s3.moveFile(f,fileTag)
-        else:
-            s3.copyFile(f,fileTag)
 
         logging.info(f"Moved {f} to {s3bucketName}/{fileTag}")
         

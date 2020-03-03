@@ -207,6 +207,22 @@ class Partitioner(object):
 
         return first_and_last_labels
 
+
+    def getFirstAndLastChunkRows(self) -> Dict[int:]:
+        def __f(idx, it):
+            first = last = none
+            num_rows = 0
+            first = next(it)
+            for i in it:
+                num_rows += 1
+                last = i
+            num_rows = (first and num_rows + 1) or num_rows
+            return (idx, num_rows, first, last)
+
+        firstAndLast = self.df.rdd.mapPartitionsWithIndex(__f).collect()
+        
+        firstAndLast =  filter( lambda f: 
+
     def writeManifest(self):
         if not self.isPartitioned:
             logging.error("Dataframe has not been re-partitioned")
@@ -219,8 +235,6 @@ class Partitioner(object):
         self.df = self.df.repartition(*self.partitionKeyColumns).sortWithinPartitions(*self.keyColumns, ascending = self.sortAscending)
         self.isPartitioned = True
 
-        #force repartitioning
-        #self.df.count()
         logging.info("Finished partitioning.")
 
         #get first and last label
