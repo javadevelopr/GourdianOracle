@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 26,2020
 #
-# Last Modified: Thu Feb 27 21:47:31 2020
+# Last Modified: Wed Mar  4 18:32:17 2020
 #
 # Author: samolof
 #
@@ -20,6 +20,7 @@ from chunk import Loader as Loader
 from chunk import Partitioner
 import functions
 import configparser
+from manifest import Manifest, Source, Layout, Table, Chunk 
 from typing import Dict, Union, List
 
 parser = argparse.ArgumentParser()
@@ -162,10 +163,12 @@ if __name__=="__main__":
             chunker.writeParquetPartitions()
             chunkLabels = chunker.getPartitionLabels()
 
-            #tagChunkFiles(dataset, ..., chunkLabels)################
-            
+            #for cl in chunkLabels
+            #   layout['chunks'] += tagChunkFile(datasetName, )
+            #layout = tagChunkFiles(dataset, ..., chunkLabels)################
+            #sources['layout'] += layout
             break ########
-
+        #manifest['sources'] += source
 
 
     spark.stop()
@@ -174,7 +177,7 @@ if __name__=="__main__":
 def tagChunkFiles(
         datasetName: str, 
         sourceName: str, 
-        tableName: str,
+        layoutName: str,
         chunkLabels: Dict[int, Tuple[int, list, list] ]
         keyColumns: List[str],
         s3BucketName: str,
@@ -188,4 +191,12 @@ def tagChunkFiles(
         cf = os.path.basename(cf)
         partitionId = int(cf.split('-')[1])
         num_rows, first_row, last_row  = chunkLabels[partitionId]
-            
+        
+        
+    
+    return layout
+
+
+        #class Manifest. sourceList[] , source = {name: , columns,} -> Layouts []   Layout {chunks, keyColumns}, chunks,
+        #Labels = []   , 
+        #Partition(first_row, last_row, num_rows, tag, filename)
