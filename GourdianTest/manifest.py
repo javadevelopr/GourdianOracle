@@ -3,11 +3,11 @@
 #
 # Date Created: Mar 04,2020
 #
-# Last Modified: Wed Mar  4 16:17:29 2020
+# Last Modified: Wed Mar  4 21:54:00 2020
 #
 # Author: samolof
 #
-# Description:	
+# Description: JSON serializable Objects to represent Datasets, Sources, Layouts, Tables and Chunks	
 #
 ##################################################################
 
@@ -23,33 +23,25 @@ class __RDict(dict):
             self[k] = v
 
 
-class Manifest(__RDict):
+class Dataset(__RDict):
     def __init__(self, name, sources=[]):
-        self.name = name
-        self.sources = sources
         super().__init__(name = name, sources = sources)
 
 class Source(__RDict):
     def __init__(self, name, layouts = [], tables=[]):
-        self.name = name
-        self.layouts = layouts
-        self.tables  = tables
         super().__init__(name=name, layouts=layouts, tables=tables)
-
-class Table(__RDict):
-    def __init__(self,name, columns=[]):
-        self.name = name
-        self.columns = []
-        super().__init__(name=name, columns = columns)
 
 class Layout(__RDict):
     def __init__(self, name, label_columns=[], chunks=[]):
-        self.name = name
-        self.chunks = chunks
-        self.label_columns = label_columns
         super().__init__(name=name, label_columns= label_columns, chunks=chunks)
 
+class Table(__RDict):
+    def __init__(self,name, columns=[]):
+        super().__init__(name=name, columns = columns)
+
 class Chunk(__RDict):
-    """ Chunk(filename= ,tag= , first_label= , last_label= , num_rows = ,)
-    """
+"""
+I could write out the stub as for the classes above but this should work:
+initialize with Chunk(filename= ,tag= , first_label= , last_label= , num_rows = )
+"""
     pass

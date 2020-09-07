@@ -3,7 +3,7 @@
 #
 # Date Created: Feb 17,2020
 #
-# Last Modified: Thu Feb 27 22:10:07 2020
+# Last Modified: Thu Mar  5 21:41:54 2020
 #
 # Author: samolof
 #
@@ -157,7 +157,7 @@ class Partitioner(object):
         self.canonStorePath = canonStorePath
 
         #need to translate keyColumns to new column names
-        self.keyColumns = list( map(lambda k: loader.columns[k], keyColumns))
+        self.keyColumns = [loader.columns[k] for k in keyColumns]
         self.partitionKeyColumns = []
 
         #similarly for keyFunctions
@@ -228,12 +228,12 @@ class Partitioner(object):
             return (idx, num_rows, first, last)
         
         def __getKeyCols(spark_row):
-            return list(lambda sr: [ sr[c] for c  in self.keyColumns], spark_row)
-
+            #return map(lambda sr: [ sr[c] for c  in self.keyColumns], spark_row)
+            return [spark_row[c] for c in self.keyColumns]
 
         firstAndLast = self.df.rdd.mapPartitionsWithIndex(__f).collect()
 
-        firstAndLastf = filter( lambda f: type(f) == tuple, firstAndLast)
+        firstAndLastf = [ f if type(f) == tuple for f in firstAndLast]
         chunkLabel  = { r[0] : (r[1], __getKeyCols(r[2]), __getKeyCols(r[3])) for r in firstAndLastf }
         
         return chunkLabel
